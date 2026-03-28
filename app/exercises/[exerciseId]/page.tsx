@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { DiagramCard } from "@/components/diagram-card";
+import { ExerciseDiagramToggle } from "@/components/exercise-diagram-toggle";
 import { SectionHeader } from "@/components/section-header";
 import { getExerciseById } from "@/lib/db";
 import { getExerciseHistory } from "@/lib/db";
@@ -24,15 +24,7 @@ export default function ExerciseDetailPage({
         title={exercise.name}
         description={exercise.description}
       />
-      <section className="grid gap-3">
-        {exercise.diagrams.map((diagram, index) => (
-          <DiagramCard
-            key={`${exercise.id}-${index}`}
-            svg={diagram}
-            title={index === 0 ? "Setup and loading position" : "Finish and movement path"}
-          />
-        ))}
-      </section>
+      <ExerciseDiagramToggle diagrams={exercise.diagrams} />
       <section className="glass-panel rounded-3xl p-4">
         <h2 className="text-lg font-semibold text-slate-50">Coaching cues</h2>
         <ul className="mt-3 grid gap-2">

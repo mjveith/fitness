@@ -5,6 +5,12 @@ import { saveWorkoutLog } from "@/lib/db";
 import { getWeekStart, formatDate } from "@/lib/date";
 import { WorkoutLog } from "@/lib/types";
 
+export type SaveWorkoutLogActionState = {
+  status: "idle" | "success" | "error";
+  message: string | null;
+  savedAt: number | null;
+};
+
 function numberOrUndefined(value: FormDataEntryValue | null) {
   if (!value) {
     return undefined;
@@ -13,23 +19,24 @@ function numberOrUndefined(value: FormDataEntryValue | null) {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
-export async function saveWorkoutLogAction(formData: FormData) {
-  const date = String(formData.get("date") ?? formatDate(new Date()));
-  const dayName = String(formData.get("dayName") ?? "Session");
-  const weekStartDate = String(formData.get("weekStartDate") ?? formatDate(getWeekStart(new Date(date))));
-  const planId = String(formData.get("planId") ?? "");
-  const exerciseIds = formData.getAll("exerciseId").map(String);
-  const exerciseNames = formData.getAll("exerciseName").map(String);
-  const exerciseTypes = formData.getAll("exerciseType").map(String);
+function parseExerciseEntries(params: {
+  exerciseIds: string[];
+  exerciseNames: string[];
+  exerciseTypes: string[];
+  getValue: (key: string) => FormDataEntryValue | null;
+}) {
+  const { exerciseIds, exerciseNames, exerciseTypes, getValue } = params;
 
-  const entries = exerciseIds.map((exerciseId, index) => {
-    const sets = Array.from({ length: 4 }, (_, setIndex) => {
+  return exerciseIds.map((exerciseId, index) => {
+    const requestedCount = numberOrUndefined(getValue(`${exerciseId}-setCount`)) ?? 0;
+    const setCount = Math.max(0, requestedCount);
+    const sets = Array.from({ length: setCount }, (_, setIndex) => {
       const prefix = `${exerciseId}-${setIndex}`;
       return {
-        reps: numberOrUndefined(formData.get(`${prefix}-reps`)),
-        weight: numberOrUndefined(formData.get(`${prefix}-weight`)),
-        duration: numberOrUndefined(formData.get(`${prefix}-duration`)),
-        notes: String(formData.get(`${prefix}-notes`) ?? "").trim() || undefined,
+        reps: numberOrUndefined(getValue(`${prefix}-reps`)),
+        weight: numberOrUndefined(getValue(`${prefix}-weight`)),
+        duration: numberOrUndefined(getValue(`${prefix}-duration`)),
+        notes: String(getValue(`${prefix}-notes`) ?? "").trim() || undefined,
       };
     }).filter((set) => set.reps || set.weight || set.duration || set.notes);
 
@@ -37,9 +44,29 @@ export async function saveWorkoutLogAction(formData: FormData) {
       exerciseId,
       name: exerciseNames[index],
       type: exerciseTypes[index] as WorkoutLog["entries"][number]["type"],
-      completed: sets.length > 0,
+      completed: String(getValue(`${exerciseId}-completed`) ?? "false") === "true",
+      actualSetCount: setCount,
       sets,
     };
+  });
+}
+
+export async function saveWorkoutLogAction(
+  _previousState: SaveWorkoutLogActionState,
+  formData: FormData,
+): Promise<SaveWorkoutLogActionState> {
+  const date = String(formData.get("date") ?? formatDate(new Date()));
+  const dayName = String(formData.get("dayName") ?? "Session");
+  const weekStartDate = String(formData.get("weekStartDate") ?? formatDate(getWeekStart(new Date(date))));
+  const planId = String(formData.get("planId") ?? "");
+  const exerciseIds = formData.getAll("exerciseId").map(String);
+  const exerciseNames = formData.getAll("exerciseName").map(String);
+  const exerciseTypes = formData.getAll("exerciseType").map(String);
+  const entries = parseExerciseEntries({
+    exerciseIds,
+    exerciseNames,
+    exerciseTypes,
+    getValue: (key) => formData.get(key),
   });
 
   const totalVolume = entries.reduce((sum, entry) => {
@@ -66,7 +93,21 @@ export async function saveWorkoutLogAction(formData: FormData) {
     notes: String(formData.get("sessionNotes") ?? "").trim() || null,
   };
 
-  saveWorkoutLog(log);
-  revalidatePath("/log");
-  revalidatePath("/progress");
+  try {
+    saveWorkoutLog(log);
+    revalidatePath("/log");
+    revalidatePath("/progress");
+
+    return {
+      status: "success",
+      message: "Workout saved successfully.",
+      savedAt: Date.now(),
+    };
+  } catch {
+    return {
+      status: "error",
+      message: "Workout save failed. Try again.",
+      savedAt: null,
+    };
+  }
 }

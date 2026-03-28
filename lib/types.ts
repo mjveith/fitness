@@ -65,6 +65,7 @@ export type WorkoutLogEntry = {
   name: string;
   type: ExerciseType;
   completed: boolean;
+  actualSetCount: number;
   sets: LoggedSet[];
 };
 

@@ -59,40 +59,48 @@ function initDb(db: Database.Database) {
     CREATE INDEX IF NOT EXISTS idx_logs_week_start ON workout_logs(week_start_date);
   `);
 
-  const exerciseCount = db.prepare("SELECT COUNT(*) as count FROM exercises").get() as { count: number };
+  const upsertExercise = db.prepare(`
+    INSERT INTO exercises (
+      id, name, description, category, muscle_groups_json, equipment_json,
+      type, diagrams_json, cues_json, default_sets, default_reps, default_rest_seconds
+    ) VALUES (
+      @id, @name, @description, @category, @muscleGroupsJson, @equipmentJson,
+      @type, @diagramsJson, @cuesJson, @defaultSets, @defaultReps, @defaultRestSeconds
+    )
+    ON CONFLICT(id) DO UPDATE SET
+      name = excluded.name,
+      description = excluded.description,
+      category = excluded.category,
+      muscle_groups_json = excluded.muscle_groups_json,
+      equipment_json = excluded.equipment_json,
+      type = excluded.type,
+      diagrams_json = excluded.diagrams_json,
+      cues_json = excluded.cues_json,
+      default_sets = excluded.default_sets,
+      default_reps = excluded.default_reps,
+      default_rest_seconds = excluded.default_rest_seconds
+  `);
 
-  if (exerciseCount.count === 0) {
-    const insert = db.prepare(`
-      INSERT INTO exercises (
-        id, name, description, category, muscle_groups_json, equipment_json,
-        type, diagrams_json, cues_json, default_sets, default_reps, default_rest_seconds
-      ) VALUES (
-        @id, @name, @description, @category, @muscleGroupsJson, @equipmentJson,
-        @type, @diagramsJson, @cuesJson, @defaultSets, @defaultReps, @defaultRestSeconds
-      )
-    `);
+  const syncExercises = db.transaction((exercises: Exercise[]) => {
+    for (const exercise of exercises) {
+      upsertExercise.run({
+        id: exercise.id,
+        name: exercise.name,
+        description: exercise.description,
+        category: exercise.category,
+        muscleGroupsJson: JSON.stringify(exercise.muscleGroups),
+        equipmentJson: JSON.stringify(exercise.equipment),
+        type: exercise.type,
+        diagramsJson: JSON.stringify(exercise.diagrams),
+        cuesJson: JSON.stringify(exercise.cues),
+        defaultSets: exercise.defaultSets,
+        defaultReps: exercise.defaultReps,
+        defaultRestSeconds: exercise.defaultRestSeconds,
+      });
+    }
+  });
 
-    const seed = db.transaction((exercises: Exercise[]) => {
-      for (const exercise of exercises) {
-        insert.run({
-          id: exercise.id,
-          name: exercise.name,
-          description: exercise.description,
-          category: exercise.category,
-          muscleGroupsJson: JSON.stringify(exercise.muscleGroups),
-          equipmentJson: JSON.stringify(exercise.equipment),
-          type: exercise.type,
-          diagramsJson: JSON.stringify(exercise.diagrams),
-          cuesJson: JSON.stringify(exercise.cues),
-          defaultSets: exercise.defaultSets,
-          defaultReps: exercise.defaultReps,
-          defaultRestSeconds: exercise.defaultRestSeconds,
-        });
-      }
-    });
-
-    seed(exerciseCatalog);
-  }
+  syncExercises(exerciseCatalog);
 }
 
 export function getDb() {

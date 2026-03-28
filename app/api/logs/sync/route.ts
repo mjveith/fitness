@@ -6,6 +6,15 @@ function valueAt<T>(value: unknown, index: number) {
   return Array.isArray(value) ? value[index] : value;
 }
 
+function numberOrUndefined(value: unknown) {
+  if (value === undefined || value === null || value === "") {
+    return undefined;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
 export async function POST(request: NextRequest) {
   const payload = (await request.json()) as { logs?: Array<Record<string, unknown>> };
   const logs = payload.logs ?? [];
@@ -15,15 +24,16 @@ export async function POST(request: NextRequest) {
     const exerciseNames = Array.isArray(item.exerciseName) ? item.exerciseName.map(String) : [];
     const exerciseTypes = Array.isArray(item.exerciseType) ? item.exerciseType.map(String) : [];
     const entries = exerciseIds.map((exerciseId, index) => {
-      const sets = Array.from({ length: 4 }, (_, setIndex) => {
+      const setCount = numberOrUndefined(valueAt(item[`${exerciseId}-setCount`], 0)) ?? 0;
+      const sets = Array.from({ length: setCount }, (_, setIndex) => {
         const reps = valueAt(item[`${exerciseId}-${setIndex}-reps`], 0);
         const weight = valueAt(item[`${exerciseId}-${setIndex}-weight`], 0);
         const duration = valueAt(item[`${exerciseId}-${setIndex}-duration`], 0);
         const notes = valueAt(item[`${exerciseId}-${setIndex}-notes`], 0);
         return {
-          reps: reps ? Number(reps) : undefined,
-          weight: weight ? Number(weight) : undefined,
-          duration: duration ? Number(duration) : undefined,
+          reps: numberOrUndefined(reps),
+          weight: numberOrUndefined(weight),
+          duration: numberOrUndefined(duration),
           notes: notes ? String(notes) : undefined,
         };
       }).filter((set) => set.reps || set.weight || set.duration || set.notes);
@@ -32,7 +42,8 @@ export async function POST(request: NextRequest) {
         exerciseId,
         name: exerciseNames[index],
         type: exerciseTypes[index] as WorkoutLog["entries"][number]["type"],
-        completed: sets.length > 0,
+        completed: String(valueAt(item[`${exerciseId}-completed`], 0) ?? "false") === "true",
+        actualSetCount: setCount,
         sets,
       };
     });
