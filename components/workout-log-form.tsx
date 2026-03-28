@@ -73,7 +73,7 @@ function buildInitialExerciseState(exercises: WorkoutLogFormExercise[]) {
     exercises.map((exercise) => [
       exercise.exerciseId,
       {
-        sets: Array.from({ length: exercise.plannedSets }, () => createEmptySet(exercise.lastWeight)),
+        sets: Array.from({ length: Math.max(1, exercise.plannedSets || 3) }, () => createEmptySet(exercise.lastWeight)),
         manualComplete: null,
       },
     ]),

@@ -12,10 +12,10 @@ export default function SchedulePage() {
       <SectionHeader
         eyebrow="Week Builder"
         title="Schedule"
-        description="Generate and persist a 7-day plan. Default flow is PPL plus one HIIT day and one recovery day."
+        description="Generate and persist a 7-day plan with configurable workout frequency and exercise volume."
       />
       <section className="glass-panel rounded-3xl p-4">
-        <form action={generatePlanAction} className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+        <form action={generatePlanAction} className="grid gap-3 sm:grid-cols-2">
           <label className="grid gap-2 text-sm text-slate-300">
             Split
             <select
@@ -28,9 +28,31 @@ export default function SchedulePage() {
               <option value="full-body">Full Body</option>
             </select>
           </label>
+          <label className="grid gap-2 text-sm text-slate-300">
+            Workout Days
+            <input
+              type="number"
+              name="workoutDays"
+              min={1}
+              max={7}
+              defaultValue={plan.workoutDays}
+              className="rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-slate-100 outline-none"
+            />
+          </label>
+          <label className="grid gap-2 text-sm text-slate-300">
+            Exercises per Workout
+            <input
+              type="number"
+              name="exercisesPerWorkout"
+              min={2}
+              max={8}
+              defaultValue={plan.exercisesPerWorkout}
+              className="rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-slate-100 outline-none"
+            />
+          </label>
           <button
             type="submit"
-            className="rounded-2xl bg-sky-400 px-4 py-3 text-sm font-semibold text-slate-950"
+            className="rounded-2xl bg-sky-400 px-4 py-3 text-sm font-semibold text-slate-950 sm:col-span-2"
           >
             Regenerate Week
           </button>

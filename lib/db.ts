@@ -36,6 +36,8 @@ function initDb(db: Database.Database) {
       id TEXT PRIMARY KEY,
       week_start_date TEXT NOT NULL UNIQUE,
       split TEXT NOT NULL,
+      workout_days INTEGER NOT NULL DEFAULT 5,
+      exercises_per_workout INTEGER NOT NULL DEFAULT 5,
       days_json TEXT NOT NULL,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
@@ -58,6 +60,19 @@ function initDb(db: Database.Database) {
     CREATE INDEX IF NOT EXISTS idx_logs_date ON workout_logs(date);
     CREATE INDEX IF NOT EXISTS idx_logs_week_start ON workout_logs(week_start_date);
   `);
+
+  const workoutPlanColumns = db
+    .prepare("PRAGMA table_info(workout_plans)")
+    .all() as Array<{ name: string }>;
+  const workoutPlanColumnNames = new Set(workoutPlanColumns.map((column) => column.name));
+
+  if (!workoutPlanColumnNames.has("workout_days")) {
+    db.exec("ALTER TABLE workout_plans ADD COLUMN workout_days INTEGER NOT NULL DEFAULT 5");
+  }
+
+  if (!workoutPlanColumnNames.has("exercises_per_workout")) {
+    db.exec("ALTER TABLE workout_plans ADD COLUMN exercises_per_workout INTEGER NOT NULL DEFAULT 5");
+  }
 
   const upsertExercise = db.prepare(`
     INSERT INTO exercises (
@@ -173,16 +188,20 @@ export function getExerciseById(id: string) {
 export function upsertWorkoutPlan(plan: WorkoutPlan) {
   const db = getDb();
   db.prepare(`
-    INSERT INTO workout_plans (id, week_start_date, split, days_json)
-    VALUES (@id, @weekStartDate, @split, @daysJson)
+    INSERT INTO workout_plans (id, week_start_date, split, workout_days, exercises_per_workout, days_json)
+    VALUES (@id, @weekStartDate, @split, @workoutDays, @exercisesPerWorkout, @daysJson)
     ON CONFLICT(week_start_date) DO UPDATE SET
       id = excluded.id,
       split = excluded.split,
+      workout_days = excluded.workout_days,
+      exercises_per_workout = excluded.exercises_per_workout,
       days_json = excluded.days_json
   `).run({
     id: plan.id,
     weekStartDate: plan.weekStartDate,
     split: plan.split,
+    workoutDays: plan.workoutDays,
+    exercisesPerWorkout: plan.exercisesPerWorkout,
     daysJson: JSON.stringify(plan.days),
   });
 }
@@ -201,6 +220,8 @@ export function getWorkoutPlanByWeek(weekStartDate: string): WorkoutPlan | null 
     id: String(row.id),
     weekStartDate: String(row.week_start_date),
     split: row.split as SplitType,
+    workoutDays: Number(row.workout_days) || 5,
+    exercisesPerWorkout: Number(row.exercises_per_workout) || 5,
     days: JSON.parse(String(row.days_json)),
   };
 }

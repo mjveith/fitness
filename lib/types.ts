@@ -50,6 +50,8 @@ export type WorkoutPlan = {
   id: string;
   weekStartDate: string;
   split: SplitType;
+  workoutDays: number;
+  exercisesPerWorkout: number;
   days: WorkoutPlanDay[];
 };
 
