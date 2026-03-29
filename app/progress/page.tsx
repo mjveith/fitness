@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { SectionHeader } from "@/components/section-header";
 import { getWorkoutLogs } from "@/lib/db";

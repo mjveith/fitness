@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { SectionHeader } from "@/components/section-header";
 import { WorkoutLogForm } from "@/components/workout-log-form";
 import { getExerciseById, getLastWeightForExercise } from "@/lib/db";
