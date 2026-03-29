@@ -257,3 +257,42 @@ export function createWorkoutPlan(config: PlanConfig, weekStartDate = formatDate
   upsertWorkoutPlan(plan);
   return plan;
 }
+
+export function swapWorkoutPlanDays(weekStartDate: string, sourceIndex: number, targetIndex: number) {
+  const plan = getWorkoutPlanByWeek(weekStartDate) ?? getOrCreateCurrentPlan();
+  const days = [...plan.days];
+
+  if (
+    sourceIndex < 0 ||
+    targetIndex < 0 ||
+    sourceIndex >= days.length ||
+    targetIndex >= days.length ||
+    sourceIndex === targetIndex
+  ) {
+    return plan;
+  }
+
+  const sourceDay = days[sourceIndex];
+  const targetDay = days[targetIndex];
+
+  days[sourceIndex] = {
+    ...sourceDay,
+    workoutType: targetDay.workoutType,
+    focus: targetDay.focus,
+    exercises: targetDay.exercises,
+  };
+  days[targetIndex] = {
+    ...targetDay,
+    workoutType: sourceDay.workoutType,
+    focus: sourceDay.focus,
+    exercises: sourceDay.exercises,
+  };
+
+  const nextPlan: WorkoutPlan = {
+    ...plan,
+    days,
+  };
+
+  upsertWorkoutPlan(nextPlan);
+  return nextPlan;
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { DiagramCard } from "@/components/diagram-card";
 import { RestTimer } from "@/components/rest-timer";
@@ -32,7 +32,8 @@ type WorkoutLogFormProps = {
     state: SaveWorkoutLogActionState,
     formData: FormData,
   ) => Promise<SaveWorkoutLogActionState>;
-  date: string;
+  scheduledDate: string;
+  actualDate: string;
   dayName: string;
   weekStartDate: string;
   planId: string;
@@ -164,7 +165,8 @@ function SubmitButton() {
 
 export function WorkoutLogForm({
   action,
-  date,
+  scheduledDate,
+  actualDate,
   dayName,
   weekStartDate,
   planId,
@@ -179,6 +181,9 @@ export function WorkoutLogForm({
   const [sessionNotes, setSessionNotes] = useState("");
   const [activeRestTimer, setActiveRestTimer] = useState<ActiveRestTimer | null>(null);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [logDate, setLogDate] = useState(actualDate);
+  const [recentlyResetExerciseId, setRecentlyResetExerciseId] = useState<string | null>(null);
+  const resetFlashTimeoutRef = useRef<number | null>(null);
   const [exerciseState, setExerciseState] = useState<Record<string, ExerciseState>>(() =>
     buildInitialExerciseState(exercises),
   );
@@ -219,11 +224,24 @@ export function WorkoutLogForm({
     }
 
     setExerciseState(buildInitialExerciseState(exercises));
+    setLogDate(actualDate);
     setSessionStartedAt(null);
     setActiveRestTimer(null);
     setSessionNotes("");
     setStatus(null);
   }, [exercises, formState.savedAt, formState.status]);
+
+  useEffect(() => {
+    setLogDate(actualDate);
+  }, [actualDate, scheduledDate]);
+
+  useEffect(() => {
+    return () => {
+      if (resetFlashTimeoutRef.current) {
+        window.clearTimeout(resetFlashTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!allExercisesComplete) {
@@ -307,6 +325,25 @@ export function WorkoutLogForm({
     });
   }
 
+  function resetExercise(exercise: WorkoutLogFormExercise) {
+    setStatus(null);
+    setExerciseState((current) => ({
+      ...current,
+      [exercise.exerciseId]: {
+        sets: Array.from({ length: current[exercise.exerciseId].sets.length }, () => createEmptySet(null)),
+        manualComplete: false,
+      },
+    }));
+    setActiveRestTimer((current) => (current?.exerciseId === exercise.exerciseId ? null : current));
+    setRecentlyResetExerciseId(exercise.exerciseId);
+    if (resetFlashTimeoutRef.current) {
+      window.clearTimeout(resetFlashTimeoutRef.current);
+    }
+    resetFlashTimeoutRef.current = window.setTimeout(() => {
+      setRecentlyResetExerciseId((current) => (current === exercise.exerciseId ? null : current));
+    }, 650);
+  }
+
   function handleRepsBlur(exercise: WorkoutLogFormExercise, value: string) {
     if (!value.trim() || exercise.restSeconds <= 0) {
       return;
@@ -343,7 +380,8 @@ export function WorkoutLogForm({
           setToastMessage("Workout queued offline.");
         }}
       >
-        <input type="hidden" name="date" value={date} />
+        <input type="hidden" name="scheduledDate" value={scheduledDate} />
+        <input type="hidden" name="actualDate" value={logDate} />
         <input type="hidden" name="dayName" value={dayName} />
         <input type="hidden" name="weekStartDate" value={weekStartDate} />
         <input type="hidden" name="planId" value={planId} />
@@ -357,6 +395,20 @@ export function WorkoutLogForm({
             </div>
             <SessionTimer startedAt={sessionStartedAt} />
           </div>
+          <label className="grid gap-2 text-sm text-slate-300 sm:max-w-xs">
+            Log this workout for
+            <input
+              type="date"
+              name="actualDateInput"
+              value={logDate}
+              max="9999-12-31"
+              onChange={(event) => {
+                setLogDate(event.target.value);
+                setStatus(null);
+              }}
+              className="rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-slate-100 outline-none transition focus:border-sky-300/40"
+            />
+          </label>
           {showCelebration ? <CelebrationBanner /> : null}
           {status ? (
             <p className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100">
@@ -376,6 +428,10 @@ export function WorkoutLogForm({
               <article
                 key={exercise.exerciseId}
                 className={`rounded-3xl border bg-slate-950/60 p-4 transition ${
+                  recentlyResetExerciseId === exercise.exerciseId
+                    ? "bg-sky-400/5 shadow-[0_0_0_1px_rgba(125,211,252,0.2)]"
+                    : ""
+                } ${
                   complete
                     ? "border-emerald-400/45 opacity-85 shadow-[0_0_0_1px_rgba(74,222,128,0.15)]"
                     : "border-white/10"
@@ -397,26 +453,35 @@ export function WorkoutLogForm({
                       <h3 className="mt-2 text-lg font-semibold text-slate-50">{exercise.name}</h3>
                       <p className="mt-2 text-sm text-slate-400">{formatPlannedScheme(exercise)}</p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => toggleComplete(exercise.exerciseId)}
-                      className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold transition ${
-                        complete
-                          ? "border-emerald-300/40 bg-emerald-400/15 text-emerald-100"
-                          : "border-white/10 bg-white/5 text-slate-300"
-                      }`}
-                    >
-                      <span
-                        className={`inline-flex h-5 w-5 items-center justify-center rounded-full border text-[10px] ${
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => resetExercise(exercise)}
+                        className="inline-flex items-center gap-2 rounded-full border border-white/15 px-3 py-2 text-xs font-semibold text-slate-300 transition hover:border-slate-300/35 hover:text-slate-100"
+                      >
+                        Reset
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => toggleComplete(exercise.exerciseId)}
+                        className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold transition ${
                           complete
-                            ? "border-emerald-300/50 bg-emerald-300/20 text-emerald-50"
-                            : "border-white/15 text-transparent"
+                            ? "border-emerald-300/40 bg-emerald-400/15 text-emerald-100"
+                            : "border-white/10 bg-white/5 text-slate-300"
                         }`}
                       >
-                        ✓
-                      </span>
-                      {complete ? "Completed" : "Mark complete"}
-                    </button>
+                        <span
+                          className={`inline-flex h-5 w-5 items-center justify-center rounded-full border text-[10px] ${
+                            complete
+                              ? "border-emerald-300/50 bg-emerald-300/20 text-emerald-50"
+                              : "border-white/15 text-transparent"
+                          }`}
+                        >
+                          ✓
+                        </span>
+                        {complete ? "Completed" : "Mark complete"}
+                      </button>
+                    </div>
                   </div>
 
                   <DiagramCard svg={exercise.diagrams[0]} title="Inline setup diagram" />

@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createWorkoutPlan } from "@/lib/plans";
+import { createWorkoutPlan, swapWorkoutPlanDays } from "@/lib/plans";
 import { SplitType } from "@/lib/types";
 
 function clamp(value: number, min: number, max: number) {
@@ -17,6 +17,21 @@ export async function generatePlanAction(formData: FormData) {
     workoutDays,
     exercisesPerWorkout,
   });
+  revalidatePath("/schedule");
+  revalidatePath("/log");
+  revalidatePath("/progress");
+}
+
+export async function swapWorkoutDaysAction(formData: FormData) {
+  const weekStartDate = String(formData.get("weekStartDate") ?? "");
+  const sourceIndex = Number(formData.get("sourceIndex"));
+  const targetIndex = Number(formData.get("targetIndex"));
+
+  if (!weekStartDate || !Number.isInteger(sourceIndex) || !Number.isInteger(targetIndex)) {
+    return;
+  }
+
+  swapWorkoutPlanDays(weekStartDate, sourceIndex, targetIndex);
   revalidatePath("/schedule");
   revalidatePath("/log");
   revalidatePath("/progress");

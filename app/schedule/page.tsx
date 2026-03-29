@@ -2,7 +2,7 @@ import Link from "next/link";
 import { SectionHeader } from "@/components/section-header";
 import { formatDisplayDate } from "@/lib/date";
 import { getOrCreateCurrentPlan } from "@/lib/plans";
-import { generatePlanAction } from "@/app/schedule/actions";
+import { generatePlanAction, swapWorkoutDaysAction } from "@/app/schedule/actions";
 
 export default function SchedulePage() {
   const plan = getOrCreateCurrentPlan();
@@ -71,12 +71,38 @@ export default function SchedulePage() {
                 </p>
                 <h2 className="mt-2 text-xl font-semibold text-slate-50">{day.workoutType}</h2>
               </div>
-              <Link
-                href={`/log?date=${day.date}`}
-                className="rounded-full border border-sky-400/20 bg-sky-400/10 px-3 py-1 text-xs font-medium text-sky-200"
-              >
-                Start
-              </Link>
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <form action={swapWorkoutDaysAction}>
+                  <input type="hidden" name="weekStartDate" value={plan.weekStartDate} />
+                  <input type="hidden" name="sourceIndex" value={day.dayOfWeek} />
+                  <input type="hidden" name="targetIndex" value={day.dayOfWeek - 1} />
+                  <button
+                    type="submit"
+                    disabled={day.dayOfWeek === 0}
+                    className="rounded-full border border-white/10 px-3 py-1 text-xs font-medium text-slate-200 transition disabled:cursor-not-allowed disabled:opacity-35"
+                  >
+                    Move up
+                  </button>
+                </form>
+                <form action={swapWorkoutDaysAction}>
+                  <input type="hidden" name="weekStartDate" value={plan.weekStartDate} />
+                  <input type="hidden" name="sourceIndex" value={day.dayOfWeek} />
+                  <input type="hidden" name="targetIndex" value={day.dayOfWeek + 1} />
+                  <button
+                    type="submit"
+                    disabled={day.dayOfWeek === plan.days.length - 1}
+                    className="rounded-full border border-white/10 px-3 py-1 text-xs font-medium text-slate-200 transition disabled:cursor-not-allowed disabled:opacity-35"
+                  >
+                    Move down
+                  </button>
+                </form>
+                <Link
+                  href={`/log?date=${day.date}`}
+                  className="rounded-full border border-sky-400/20 bg-sky-400/10 px-3 py-1 text-xs font-medium text-sky-200"
+                >
+                  Start
+                </Link>
+              </div>
             </div>
             <p className="mt-3 text-sm text-slate-300">{day.focus}</p>
             {day.exercises.length > 0 ? (

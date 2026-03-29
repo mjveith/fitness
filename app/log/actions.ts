@@ -55,9 +55,9 @@ export async function saveWorkoutLogAction(
   _previousState: SaveWorkoutLogActionState,
   formData: FormData,
 ): Promise<SaveWorkoutLogActionState> {
-  const date = String(formData.get("date") ?? formatDate(new Date()));
+  const actualDate = String(formData.get("actualDate") ?? formData.get("scheduledDate") ?? formatDate(new Date()));
   const dayName = String(formData.get("dayName") ?? "Session");
-  const weekStartDate = String(formData.get("weekStartDate") ?? formatDate(getWeekStart(new Date(date))));
+  const weekStartDate = String(formData.get("weekStartDate") ?? formatDate(getWeekStart(new Date(actualDate))));
   const planId = String(formData.get("planId") ?? "");
   const exerciseIds = formData.getAll("exerciseId").map(String);
   const exerciseNames = formData.getAll("exerciseName").map(String);
@@ -82,8 +82,8 @@ export async function saveWorkoutLogAction(
   }, 0);
 
   const log: WorkoutLog = {
-    id: `log-${date}-${Date.now()}`,
-    date,
+    id: `log-${actualDate}-${Date.now()}`,
+    date: actualDate,
     dayName,
     weekStartDate,
     planId: planId || null,

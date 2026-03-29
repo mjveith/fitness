@@ -1,12 +1,16 @@
 export function DiagramCard({
   svg,
   title,
+  className = "",
 }: {
   svg: string;
   title: string;
+  className?: string;
 }) {
   return (
-    <figure className="overflow-hidden rounded-3xl border border-white/10 bg-slate-950/70">
+    <figure
+      className={`overflow-hidden rounded-3xl border border-white/10 bg-slate-950/70 ${className}`.trim()}
+    >
       <div
         className="[&_svg]:block [&_svg]:h-auto [&_svg]:w-full"
         dangerouslySetInnerHTML={{ __html: svg }}

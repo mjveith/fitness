@@ -23,10 +23,11 @@ type DetailedExercise = {
 export default function LogPage({
   searchParams,
 }: {
-  searchParams: { date?: string };
+  searchParams: { date?: string; actualDate?: string };
 }) {
   const plan = getOrCreateCurrentPlan();
   const selectedDate = searchParams.date ?? formatDate(new Date());
+  const actualDate = searchParams.actualDate ?? formatDate(new Date());
   const selectedDay = plan.days.find((day) => day.date === selectedDate) ?? plan.days[0];
   const detailedExercises = selectedDay.exercises
     .map((item) => {
@@ -53,7 +54,7 @@ export default function LogPage({
           {plan.days.map((day) => (
             <a
               key={day.date}
-              href={`/log?date=${day.date}`}
+              href={`/log?date=${day.date}&actualDate=${actualDate}`}
               className={`rounded-full px-3 py-2 text-xs ${
                 day.date === selectedDay.date
                   ? "bg-sky-400 text-slate-950"
@@ -68,7 +69,8 @@ export default function LogPage({
       <section className="glass-panel rounded-3xl p-4">
         <WorkoutLogForm
           action={saveWorkoutLogAction}
-          date={selectedDay.date}
+          scheduledDate={selectedDay.date}
+          actualDate={actualDate}
           dayName={selectedDay.workoutType}
           weekStartDate={plan.weekStartDate}
           planId={plan.id}

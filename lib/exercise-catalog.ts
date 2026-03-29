@@ -846,8 +846,8 @@ function muscleHighlights(pose: Pose, primary: string[], secondary: string[]) {
       .join("");
 
   return [
-    `<g>${renderRegions(resolveMuscleRegions(secondary), colors.secondary, 0.42)}</g>`,
-    `<g>${renderRegions(resolveMuscleRegions(primary), colors.primary, 0.72)}</g>`,
+    `<g>${renderRegions(resolveMuscleRegions(secondary), colors.secondary, 0.34)}</g>`,
+    `<g>${renderRegions(resolveMuscleRegions(primary), colors.primary, 0.62)}</g>`,
   ].join("");
 }
 
@@ -870,10 +870,11 @@ function buildDiagram(
   const pose = figurePose(movement, phase);
   const label = phase === "start" ? "Start Position" : "End Position";
   const animationName = `flow-${slugify(name)}-${phase}`;
+  const accent = category === "cardio" || category === "plyo" ? "#38bdf8" : "#7dd3fc";
   const headRadius = movement === "pushup" || movement === "plank" ? 10 : 14;
 
   return `
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 220" role="img" aria-label="${name} ${label}" shape-rendering="geometricPrecision">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 232" role="img" aria-label="${name} ${label}" shape-rendering="geometricPrecision">
       <defs>
         <marker id="arrow-${slugify(name)}-${phase}" viewBox="0 0 14 14" refX="12" refY="7" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
           <path d="M 0 0 L 14 7 L 0 14 z" fill="#7dd3fc" />
@@ -892,37 +893,41 @@ function buildDiagram(
           to { stroke-dashoffset: 0; }
         }
       </style>
-      <rect width="200" height="220" rx="30" fill="#081121" />
-      <rect x="12" y="12" width="176" height="196" rx="26" fill="rgba(15, 23, 42, 0.84)" stroke="rgba(148, 163, 184, 0.24)" />
-      <text x="22" y="34" fill="#e2e8f0" font-family="Arial, sans-serif" font-size="12" letter-spacing="1.5">${label.toUpperCase()}</text>
-      <text x="22" y="52" fill="${category === "cardio" || category === "plyo" ? "#38bdf8" : "#7dd3fc"}" font-family="Arial, sans-serif" font-size="11">${name}</text>
-      ${muscleHighlights(pose, primary, secondary)}
-      <g fill="none" stroke="#f8fafc" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke">
-        <path d="${torsoShell(pose)}" fill="rgba(248, 250, 252, 0.08)" />
-        ${line(pose.neck, point((pose.shoulderLeft.x + pose.shoulderRight.x) / 2, (pose.shoulderLeft.y + pose.shoulderRight.y) / 2))}
-        ${line(pose.shoulderLeft, pose.elbowLeft)}
-        ${line(pose.elbowLeft, pose.wristLeft)}
-        ${line(pose.shoulderRight, pose.elbowRight)}
-        ${line(pose.elbowRight, pose.wristRight)}
-        ${line(pose.hipLeft, pose.kneeLeft)}
-        ${line(pose.kneeLeft, pose.ankleLeft)}
-        ${line(pose.hipRight, pose.kneeRight)}
-        ${line(pose.kneeRight, pose.ankleRight)}
-        ${line(pose.hipLeft, pose.hipRight)}
+      <rect width="200" height="232" rx="30" fill="#081121" />
+      <rect x="12" y="12" width="176" height="208" rx="26" fill="rgba(15, 23, 42, 0.84)" stroke="rgba(148, 163, 184, 0.24)" />
+      <rect x="20" y="18" width="160" height="24" rx="12" fill="rgba(2, 6, 23, 0.72)" />
+      <text x="100" y="33" fill="${accent}" font-family="Arial, sans-serif" font-size="11" font-weight="700" letter-spacing="0.4" text-anchor="middle">${name}</text>
+      <g transform="translate(0 12)">
+        <line x1="24.5" y1="196.5" x2="175.5" y2="196.5" stroke="rgba(148, 163, 184, 0.26)" stroke-width="1.5" stroke-dasharray="6 7" vector-effect="non-scaling-stroke" />
+        <g fill="none" stroke="#f8fafc" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke">
+          <path d="${torsoShell(pose)}" fill="rgba(248, 250, 252, 0.08)" />
+          ${line(pose.neck, point((pose.shoulderLeft.x + pose.shoulderRight.x) / 2, (pose.shoulderLeft.y + pose.shoulderRight.y) / 2))}
+          ${line(pose.shoulderLeft, pose.elbowLeft)}
+          ${line(pose.elbowLeft, pose.wristLeft)}
+          ${line(pose.shoulderRight, pose.elbowRight)}
+          ${line(pose.elbowRight, pose.wristRight)}
+          ${line(pose.hipLeft, pose.kneeLeft)}
+          ${line(pose.kneeLeft, pose.ankleLeft)}
+          ${line(pose.hipRight, pose.kneeRight)}
+          ${line(pose.kneeRight, pose.ankleRight)}
+          ${line(pose.hipLeft, pose.hipRight)}
+        </g>
+        <circle cx="${pose.head.x}" cy="${pose.head.y}" r="${headRadius}" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" vector-effect="non-scaling-stroke" />
+        <g fill="#cbd5e1" stroke="#f8fafc" stroke-width="1.5" vector-effect="non-scaling-stroke">
+          ${joint(pose.shoulderLeft, 3.6)}
+          ${joint(pose.shoulderRight, 3.6)}
+          ${joint(pose.elbowLeft, 3.2)}
+          ${joint(pose.elbowRight, 3.2)}
+          ${joint(pose.hipLeft, 3.4)}
+          ${joint(pose.hipRight, 3.4)}
+          ${joint(pose.kneeLeft, 3.2)}
+          ${joint(pose.kneeRight, 3.2)}
+        </g>
+        ${muscleHighlights(pose, primary, secondary)}
+        <path d="${pose.arrow}" fill="none" stroke="#7dd3fc" stroke-width="5.5" stroke-linecap="round" stroke-dasharray="8 8" marker-end="url(#arrow-${slugify(name)}-${phase})" filter="url(#glow-${slugify(name)}-${phase})" vector-effect="non-scaling-stroke" style="animation:${animationName} 1.1s linear infinite" />
       </g>
-      <circle cx="${pose.head.x}" cy="${pose.head.y}" r="${headRadius}" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" vector-effect="non-scaling-stroke" />
-      <g fill="#cbd5e1" stroke="#f8fafc" stroke-width="1.5" vector-effect="non-scaling-stroke">
-        ${joint(pose.shoulderLeft, 3.6)}
-        ${joint(pose.shoulderRight, 3.6)}
-        ${joint(pose.elbowLeft, 3.2)}
-        ${joint(pose.elbowRight, 3.2)}
-        ${joint(pose.hipLeft, 3.4)}
-        ${joint(pose.hipRight, 3.4)}
-        ${joint(pose.kneeLeft, 3.2)}
-        ${joint(pose.kneeRight, 3.2)}
-      </g>
-      <path d="${pose.arrow}" fill="none" stroke="#7dd3fc" stroke-width="5.5" stroke-linecap="round" stroke-dasharray="8 8" marker-end="url(#arrow-${slugify(name)}-${phase})" filter="url(#glow-${slugify(name)}-${phase})" vector-effect="non-scaling-stroke" style="animation:${animationName} 1.1s linear infinite" />
-      <line x1="24.5" y1="196.5" x2="175.5" y2="196.5" stroke="rgba(148, 163, 184, 0.26)" stroke-width="1.5" stroke-dasharray="6 7" vector-effect="non-scaling-stroke" />
+      <rect x="34" y="204" width="132" height="14" rx="7" fill="rgba(2, 6, 23, 0.72)" />
+      <text x="100" y="214" fill="#e2e8f0" font-family="Arial, sans-serif" font-size="10" letter-spacing="1.6" text-anchor="middle">${label.toUpperCase()}</text>
     </svg>
   `.trim();
 }
