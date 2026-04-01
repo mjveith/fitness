@@ -1,5 +1,6 @@
 export const exerciseImageMap: Record<string, string> = {
   "barbell-bench-press": "Barbell_Bench_Press_-_Medium_Grip",
+  "dumbbell-bench-press": "Dumbbell_Bench_Press",
   "incline-dumbbell-press": "Incline_Dumbbell_Press",
   "decline-bench-press": "Decline_Barbell_Bench_Press",
   "machine-chest-press": "Leverage_Chest_Press",

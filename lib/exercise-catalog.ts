@@ -36,6 +36,7 @@ type Blueprint = {
 const catalogBlueprints: Blueprint[] = [
   ...createBlueprints("chest", "strength", "press", [
     ["Barbell Bench Press", ["barbell", "bench"]],
+    ["Dumbbell Bench Press", ["dumbbells", "bench"]],
     ["Incline Dumbbell Press", ["dumbbells", "bench"]],
     ["Decline Bench Press", ["barbell", "bench"]],
     ["Machine Chest Press", ["machine"]],
