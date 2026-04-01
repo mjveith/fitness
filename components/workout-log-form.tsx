@@ -11,6 +11,7 @@ import type { SaveWorkoutLogActionState } from "@/app/log/actions";
 import type { ExerciseCategory, ExerciseType } from "@/lib/types";
 
 const queueKey = "fp-pending-logs-v1";
+const swapStateKey = "fp-swap-state-v1";
 const initialState: SaveWorkoutLogActionState = {
   status: "idle",
   message: null,
@@ -91,6 +92,29 @@ function buildInitialExerciseState(exercises: WorkoutLogFormExercise[]) {
       },
     ]),
   ) as Record<string, ExerciseState>;
+}
+
+type SavedSwapState = {
+  exerciseState: Record<string, ExerciseState>;
+  sessionNotes: string;
+  logDate: string;
+  sessionStartedAt: number | null;
+};
+
+function saveSwapState(state: SavedSwapState) {
+  try {
+    window.sessionStorage.setItem(swapStateKey, JSON.stringify(state));
+  } catch { /* quota errors, etc */ }
+}
+
+function loadAndClearSwapState(): SavedSwapState | null {
+  try {
+    const raw = window.sessionStorage.getItem(swapStateKey);
+    window.sessionStorage.removeItem(swapStateKey);
+    return raw ? (JSON.parse(raw) as SavedSwapState) : null;
+  } catch {
+    return null;
+  }
 }
 
 function appendToQueue(payload: Record<string, unknown>) {
@@ -198,9 +222,31 @@ export function WorkoutLogForm({
   const [recentlyResetExerciseId, setRecentlyResetExerciseId] = useState<string | null>(null);
   const [activeSwapTarget, setActiveSwapTarget] = useState<ActiveSwapTarget | null>(null);
   const resetFlashTimeoutRef = useRef<number | null>(null);
+  const restoredRef = useRef(false);
   const [exerciseState, setExerciseState] = useState<Record<string, ExerciseState>>(() =>
     buildInitialExerciseState(exercises),
   );
+
+  // Restore form state after a swap reload (runs once on mount, client-only)
+  useEffect(() => {
+    if (restoredRef.current) return;
+    restoredRef.current = true;
+    const saved = loadAndClearSwapState();
+    if (!saved) return;
+    // Merge: keep saved state for exercises that still exist, add fresh state for new ones
+    setExerciseState((current) => {
+      const merged = { ...current };
+      for (const [id, state] of Object.entries(saved.exerciseState)) {
+        if (merged[id]) {
+          merged[id] = state;
+        }
+      }
+      return merged;
+    });
+    if (saved.sessionNotes) setSessionNotes(saved.sessionNotes);
+    if (saved.logDate) setLogDate(saved.logDate);
+    if (saved.sessionStartedAt) setSessionStartedAt(saved.sessionStartedAt);
+  }, []);
 
   const completionMap = useMemo(() => {
     return Object.fromEntries(
@@ -641,6 +687,14 @@ export function WorkoutLogForm({
         weekStartDate={weekStartDate}
         dayIndex={dayIndex}
         exerciseIndex={activeSwapTarget?.exerciseIndex ?? 0}
+        onBeforeSwap={() => {
+          saveSwapState({
+            exerciseState,
+            sessionNotes,
+            logDate,
+            sessionStartedAt,
+          });
+        }}
       />
     </>
   );

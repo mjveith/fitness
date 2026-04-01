@@ -24,6 +24,7 @@ type ExerciseSwapModalProps = {
   weekStartDate: string;
   dayIndex: number;
   exerciseIndex: number;
+  onBeforeSwap?: () => void;
 };
 
 export function ExerciseSwapModal({
@@ -35,6 +36,7 @@ export function ExerciseSwapModal({
   weekStartDate,
   dayIndex,
   exerciseIndex,
+  onBeforeSwap,
 }: ExerciseSwapModalProps) {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [activeCategory, setActiveCategory] = useState<ExerciseCategory | "all">(initialCategory);
@@ -97,7 +99,8 @@ export function ExerciseSwapModal({
         throw new Error(data.error || "Swap failed");
       }
 
-      // Full page reload to pick up the new exercise cleanly
+      // Save form state before reload so logged data isn't lost
+      onBeforeSwap?.();
       window.location.reload();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Swap failed");
