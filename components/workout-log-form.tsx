@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useFormState, useFormStatus } from "react-dom";
-import { DiagramCard } from "@/components/diagram-card";
+import { ExerciseDiagramToggle } from "@/components/exercise-diagram-toggle";
 import { RestTimer } from "@/components/rest-timer";
 import { SessionTimer } from "@/components/session-timer";
 import { Toast } from "@/components/toast";
@@ -484,7 +484,7 @@ export function WorkoutLogForm({
                     </div>
                   </div>
 
-                  <DiagramCard svg={exercise.diagrams[0]} title="Inline setup diagram" />
+                  <ExerciseDiagramToggle diagrams={exercise.diagrams} />
 
                   <div className="grid gap-3">
                     {state.sets.map((set, setIndex) => {

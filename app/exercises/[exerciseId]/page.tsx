@@ -51,11 +51,32 @@ export default function ExerciseDetailPage({
       <section className="glass-panel rounded-3xl p-4">
         <h2 className="text-lg font-semibold text-slate-50">Recent history</h2>
         {history.length > 0 ? (
-          <ul className="mt-3 grid gap-2">
+          <ul className="mt-3 grid gap-3">
             {history.map((entry) => (
-              <li key={entry.date} className="rounded-2xl border border-white/10 bg-slate-950/60 px-3 py-3 text-sm text-slate-300">
-                <span className="font-medium text-slate-100">{entry.date}</span>{" "}
-                <span className="text-slate-400">Volume {entry.totalVolume.toFixed(0)}</span>
+              <li key={entry.date} className="rounded-2xl border border-white/10 bg-slate-950/60 px-3 py-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-slate-100">{entry.date}</span>
+                  <span className="text-xs text-slate-400">Vol {entry.totalVolume.toFixed(0)}</span>
+                </div>
+                {entry.sets.length > 0 && (
+                  <ul className="mt-2 grid gap-1">
+                    {entry.sets.map((set, setIdx) => (
+                      <li key={setIdx} className="flex items-center gap-2 text-xs text-slate-300">
+                        <span className="w-10 shrink-0 text-slate-500">Set {setIdx + 1}</span>
+                        {typeof set.reps === "number" && typeof set.weight === "number" ? (
+                          <span>{set.reps} × {set.weight} lbs</span>
+                        ) : typeof set.reps === "number" ? (
+                          <span>{set.reps} reps</span>
+                        ) : typeof set.duration === "number" ? (
+                          <span>{set.duration}s</span>
+                        ) : (
+                          <span className="text-slate-500">—</span>
+                        )}
+                        {set.notes && <span className="text-slate-500 italic">({set.notes})</span>}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </li>
             ))}
           </ul>

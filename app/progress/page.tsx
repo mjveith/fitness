@@ -3,6 +3,7 @@ import Link from "next/link";
 import { SectionHeader } from "@/components/section-header";
 import { getWorkoutLogs } from "@/lib/db";
 import { getWeeklySummary } from "@/lib/progress";
+import { WorkoutLogDetail } from "@/components/workout-log-detail";
 
 export default function ProgressPage() {
   const summary = getWeeklySummary();
@@ -36,24 +37,7 @@ export default function ProgressPage() {
         {logs.length > 0 ? (
           <ul className="mt-3 grid gap-3">
             {logs.map((log) => (
-              <li key={log.id} className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-slate-50">{log.dayName}</p>
-                    <p className="mt-1 text-sm text-slate-400">
-                      {log.date} · {log.entries.length} exercises · volume {log.totalVolume.toFixed(0)}
-                    </p>
-                  </div>
-                  {log.entries[0] ? (
-                    <Link
-                      href={`/exercises/${log.entries[0].exerciseId}`}
-                      className="rounded-full border border-white/10 px-3 py-2 text-xs text-slate-300"
-                    >
-                      View exercise history
-                    </Link>
-                  ) : null}
-                </div>
-              </li>
+              <WorkoutLogDetail key={log.id} log={log} />
             ))}
           </ul>
         ) : (
