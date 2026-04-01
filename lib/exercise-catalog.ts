@@ -1,3 +1,4 @@
+import { getExerciseImageUrls } from "@/lib/exercise-image-map";
 import { Exercise, ExerciseCategory, ExerciseType } from "@/lib/types";
 
 type Blueprint = {
@@ -933,10 +934,11 @@ function buildDiagram(
 }
 
 export const exerciseCatalog: Exercise[] = catalogBlueprints.map((blueprint) => {
+  const id = slugify(blueprint.name);
   const muscleGroups = [...blueprint.primary, ...blueprint.secondary];
 
   return {
-    id: slugify(blueprint.name),
+    id,
     name: blueprint.name,
     description: blueprint.description,
     category: blueprint.category,
@@ -961,6 +963,7 @@ export const exerciseCatalog: Exercise[] = catalogBlueprints.map((blueprint) => 
         blueprint.secondary,
       ),
     ],
+    imageUrls: getExerciseImageUrls(id),
     cues: blueprint.cues,
     defaultSets: blueprint.defaultSets,
     defaultReps: blueprint.defaultReps,

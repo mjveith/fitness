@@ -74,13 +74,17 @@ export default function LogPage({
           actualDate={actualDate}
           dayName={selectedDay.workoutType}
           weekStartDate={plan.weekStartDate}
+          dayIndex={selectedDay.dayOfWeek}
           planId={plan.id}
           focus={selectedDay.focus}
           exercises={detailedExercises.map((item) => ({
             exerciseId: item.exercise.id,
             name: item.exercise.name,
+            category: item.exercise.category,
             type: item.exercise.type,
             diagrams: item.exercise.diagrams,
+            imageUrls: item.exercise.imageUrls,
+            equipment: item.exercise.equipment,
             lastWeight: item.lastWeight,
             plannedSets: item.planExercise.sets,
             plannedReps: item.planExercise.reps,

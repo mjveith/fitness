@@ -21,6 +21,7 @@ export type Exercise = {
   equipment: string[];
   type: ExerciseType;
   diagrams: string[];
+  imageUrls?: [string, string] | null;
   cues: string[];
   defaultSets: number;
   defaultReps: string;

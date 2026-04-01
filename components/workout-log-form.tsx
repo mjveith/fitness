@@ -3,11 +3,12 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { ExerciseDiagramToggle } from "@/components/exercise-diagram-toggle";
+import { ExerciseSwapModal } from "@/components/exercise-swap-modal";
 import { RestTimer } from "@/components/rest-timer";
 import { SessionTimer } from "@/components/session-timer";
 import { Toast } from "@/components/toast";
 import type { SaveWorkoutLogActionState } from "@/app/log/actions";
-import type { ExerciseType } from "@/lib/types";
+import type { ExerciseCategory, ExerciseType } from "@/lib/types";
 
 const queueKey = "fp-pending-logs-v1";
 const initialState: SaveWorkoutLogActionState = {
@@ -19,8 +20,11 @@ const initialState: SaveWorkoutLogActionState = {
 type WorkoutLogFormExercise = {
   exerciseId: string;
   name: string;
+  category: ExerciseCategory;
   type: ExerciseType;
   diagrams: string[];
+  imageUrls?: [string, string] | null;
+  equipment: string[];
   lastWeight: number | null;
   plannedSets: number;
   plannedReps: string;
@@ -36,6 +40,7 @@ type WorkoutLogFormProps = {
   actualDate: string;
   dayName: string;
   weekStartDate: string;
+  dayIndex: number;
   planId: string;
   focus: string;
   exercises: WorkoutLogFormExercise[];
@@ -58,6 +63,13 @@ type ActiveRestTimer = {
   exerciseName: string;
   durationSeconds: number;
   startedAt: number;
+};
+
+type ActiveSwapTarget = {
+  exerciseId: string;
+  exerciseName: string;
+  category: ExerciseCategory;
+  exerciseIndex: number;
 };
 
 function createEmptySet(defaultWeight?: number | null): ExerciseSetState {
@@ -169,6 +181,7 @@ export function WorkoutLogForm({
   actualDate,
   dayName,
   weekStartDate,
+  dayIndex,
   planId,
   focus,
   exercises,
@@ -183,6 +196,7 @@ export function WorkoutLogForm({
   const [showCelebration, setShowCelebration] = useState(false);
   const [logDate, setLogDate] = useState(actualDate);
   const [recentlyResetExerciseId, setRecentlyResetExerciseId] = useState<string | null>(null);
+  const [activeSwapTarget, setActiveSwapTarget] = useState<ActiveSwapTarget | null>(null);
   const resetFlashTimeoutRef = useRef<number | null>(null);
   const [exerciseState, setExerciseState] = useState<Record<string, ExerciseState>>(() =>
     buildInitialExerciseState(exercises),
@@ -418,7 +432,7 @@ export function WorkoutLogForm({
         </div>
 
         {exercises.length > 0 ? (
-          exercises.map((exercise) => {
+          exercises.map((exercise, exerciseIndex) => {
             const state = exerciseState[exercise.exerciseId];
             const complete = completionMap[exercise.exerciseId];
             const hideWeight = exercise.type !== "strength";
@@ -456,6 +470,20 @@ export function WorkoutLogForm({
                     <div className="flex flex-wrap items-center justify-end gap-2">
                       <button
                         type="button"
+                        onClick={() =>
+                          setActiveSwapTarget({
+                            exerciseId: exercise.exerciseId,
+                            exerciseName: exercise.name,
+                            category: exercise.category,
+                            exerciseIndex,
+                          })
+                        }
+                        className="inline-flex items-center gap-2 rounded-full border border-sky-300/20 bg-sky-400/10 px-3 py-2 text-xs font-semibold text-sky-100 transition hover:border-sky-300/40"
+                      >
+                        Swap
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => resetExercise(exercise)}
                         className="inline-flex items-center gap-2 rounded-full border border-white/15 px-3 py-2 text-xs font-semibold text-slate-300 transition hover:border-slate-300/35 hover:text-slate-100"
                       >
@@ -484,7 +512,7 @@ export function WorkoutLogForm({
                     </div>
                   </div>
 
-                  <ExerciseDiagramToggle diagrams={exercise.diagrams} />
+                  <ExerciseDiagramToggle diagrams={exercise.diagrams} imageUrls={exercise.imageUrls} />
 
                   <div className="grid gap-3">
                     {state.sets.map((set, setIndex) => {
@@ -603,6 +631,16 @@ export function WorkoutLogForm({
         />
         <SubmitButton />
       </form>
+      <ExerciseSwapModal
+        open={activeSwapTarget !== null}
+        onClose={() => setActiveSwapTarget(null)}
+        currentExerciseId={activeSwapTarget?.exerciseId ?? ""}
+        currentExerciseName={activeSwapTarget?.exerciseName ?? ""}
+        initialCategory={activeSwapTarget?.category ?? "chest"}
+        weekStartDate={weekStartDate}
+        dayIndex={dayIndex}
+        exerciseIndex={activeSwapTarget?.exerciseIndex ?? 0}
+      />
     </>
   );
 }

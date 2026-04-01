@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import Database from "better-sqlite3";
 import { exerciseCatalog } from "@/lib/exercise-catalog";
+import { getExerciseImageUrls } from "@/lib/exercise-image-map";
 import { Exercise, SplitType, WorkoutLog, WorkoutPlan } from "@/lib/types";
 
 const dataDir = path.join(process.cwd(), "data");
@@ -130,8 +131,10 @@ export function getDb() {
 }
 
 function parseExerciseRow(row: Record<string, unknown>): Exercise {
+  const id = String(row.id);
+
   return {
-    id: String(row.id),
+    id,
     name: String(row.name),
     description: String(row.description),
     category: row.category as Exercise["category"],
@@ -139,6 +142,7 @@ function parseExerciseRow(row: Record<string, unknown>): Exercise {
     equipment: JSON.parse(String(row.equipment_json)),
     type: row.type as Exercise["type"],
     diagrams: JSON.parse(String(row.diagrams_json)),
+    imageUrls: getExerciseImageUrls(id),
     cues: JSON.parse(String(row.cues_json)),
     defaultSets: Number(row.default_sets),
     defaultReps: String(row.default_reps),
