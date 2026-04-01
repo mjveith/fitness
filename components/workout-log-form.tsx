@@ -470,14 +470,15 @@ export function WorkoutLogForm({
                     <div className="flex flex-wrap items-center justify-end gap-2">
                       <button
                         type="button"
-                        onClick={() =>
+                        onClick={() => {
                           setActiveSwapTarget({
                             exerciseId: exercise.exerciseId,
                             exerciseName: exercise.name,
                             category: exercise.category,
                             exerciseIndex,
-                          })
-                        }
+                          });
+                          window.scrollTo({ top: 0 });
+                        }}
                         className="inline-flex items-center gap-2 rounded-full border border-sky-300/20 bg-sky-400/10 px-3 py-2 text-xs font-semibold text-sky-100 transition hover:border-sky-300/40"
                       >
                         Swap
