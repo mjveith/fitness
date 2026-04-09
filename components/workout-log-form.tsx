@@ -8,7 +8,7 @@ import { RestTimer } from "@/components/rest-timer";
 import { SessionTimer } from "@/components/session-timer";
 import { Toast } from "@/components/toast";
 import type { SaveWorkoutLogActionState } from "@/app/log/actions";
-import type { ExerciseCategory, ExerciseType } from "@/lib/types";
+import type { ExerciseCategory, ExerciseType, LoggedSet } from "@/lib/types";
 
 const queueKey = "fp-pending-logs-v1";
 const swapStateKey = "fp-swap-state-v1";
@@ -27,6 +27,7 @@ type WorkoutLogFormExercise = {
   imageUrls?: [string, string] | null;
   equipment: string[];
   lastWeight: number | null;
+  lastEntrySets?: LoggedSet[] | null;
   plannedSets: number;
   plannedReps: string;
   restSeconds: number;
@@ -82,15 +83,44 @@ function createEmptySet(defaultWeight?: number | null): ExerciseSetState {
   };
 }
 
+function createSeededSet(previousSet: LoggedSet | undefined, defaultWeight?: number | null): ExerciseSetState {
+  return {
+    reps: typeof previousSet?.reps === "number" ? String(previousSet.reps) : "",
+    weight:
+      typeof previousSet?.weight === "number"
+        ? String(previousSet.weight)
+        : typeof defaultWeight === "number"
+          ? String(defaultWeight)
+          : "",
+    duration: typeof previousSet?.duration === "number" ? String(previousSet.duration) : "",
+    notes: previousSet?.notes ?? "",
+  };
+}
+
 function buildInitialExerciseState(exercises: WorkoutLogFormExercise[]) {
   return Object.fromEntries(
-    exercises.map((exercise) => [
-      exercise.exerciseId,
-      {
-        sets: Array.from({ length: Math.max(1, exercise.plannedSets || 3) }, () => createEmptySet(exercise.lastWeight)),
-        manualComplete: null,
-      },
-    ]),
+    exercises.map((exercise) => {
+      const setCount = Math.max(1, exercise.plannedSets || 3);
+      const hasCarryover = Boolean(
+        exercise.lastEntrySets?.some(
+          (set) =>
+            typeof set.reps === "number" ||
+            typeof set.weight === "number" ||
+            typeof set.duration === "number" ||
+            Boolean(set.notes?.trim()),
+        ),
+      );
+
+      return [
+        exercise.exerciseId,
+        {
+          sets: Array.from({ length: setCount }, (_, index) =>
+            createSeededSet(exercise.lastEntrySets?.[index], exercise.lastWeight),
+          ),
+          manualComplete: hasCarryover ? false : null,
+        },
+      ];
+    }),
   ) as Record<string, ExerciseState>;
 }
 
@@ -512,6 +542,9 @@ export function WorkoutLogForm({
                       <p className="text-xs uppercase tracking-[0.28em] text-sky-300">{exercise.type}</p>
                       <h3 className="mt-2 text-lg font-semibold text-slate-50">{exercise.name}</h3>
                       <p className="mt-2 text-sm text-slate-400">{formatPlannedScheme(exercise)}</p>
+                      {exercise.lastEntrySets?.length ? (
+                        <p className="mt-2 text-xs text-slate-500">Prefilled from your last logged set data.</p>
+                      ) : null}
                     </div>
                     <div className="flex flex-wrap items-center justify-end gap-2">
                       <button

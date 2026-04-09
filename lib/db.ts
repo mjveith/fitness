@@ -285,6 +285,24 @@ export function getLastWeightForExercise(exerciseId: string) {
   return null;
 }
 
+export function getLastExerciseEntry(exerciseId: string) {
+  const logs = getWorkoutLogs(100);
+
+  for (const log of logs) {
+    const entry = log.entries.find((item) => item.exerciseId === exerciseId);
+
+    if (entry) {
+      return {
+        date: log.date,
+        sets: entry.sets,
+        actualSetCount: entry.actualSetCount,
+      };
+    }
+  }
+
+  return null;
+}
+
 export function getExerciseHistory(exerciseId: string) {
   return getWorkoutLogs(120)
     .map((log) => {

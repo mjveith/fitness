@@ -1,11 +1,11 @@
 export const dynamic = "force-dynamic";
 import { SectionHeader } from "@/components/section-header";
 import { WorkoutLogForm } from "@/components/workout-log-form";
-import { getExerciseById, getLastWeightForExercise } from "@/lib/db";
+import { getExerciseById, getLastExerciseEntry, getLastWeightForExercise } from "@/lib/db";
 import { formatDate } from "@/lib/date";
 import { getOrCreateCurrentPlan } from "@/lib/plans";
 import { saveWorkoutLogAction } from "@/app/log/actions";
-import { Exercise } from "@/lib/types";
+import { Exercise, LoggedSet } from "@/lib/types";
 
 type DetailedExercise = {
   planExercise: {
@@ -19,6 +19,7 @@ type DetailedExercise = {
   };
   exercise: Exercise;
   lastWeight: number | null;
+  lastEntrySets: LoggedSet[] | null;
 };
 
 export default function LogPage({
@@ -38,6 +39,7 @@ export default function LogPage({
             planExercise: item,
             exercise,
             lastWeight: exercise.type === "strength" ? getLastWeightForExercise(exercise.id) : null,
+            lastEntrySets: getLastExerciseEntry(exercise.id)?.sets ?? null,
           }
         : null;
     })
@@ -86,6 +88,7 @@ export default function LogPage({
             imageUrls: item.exercise.imageUrls,
             equipment: item.exercise.equipment,
             lastWeight: item.lastWeight,
+            lastEntrySets: item.lastEntrySets,
             plannedSets: item.planExercise.sets,
             plannedReps: item.planExercise.reps,
             restSeconds: item.planExercise.restSeconds,
