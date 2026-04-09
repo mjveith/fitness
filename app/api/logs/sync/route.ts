@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { saveWorkoutLog } from "@/lib/db";
+import { findExistingWorkoutLog, saveWorkoutLog } from "@/lib/db";
 import { WorkoutLog } from "@/lib/types";
 
 function valueAt<T>(value: unknown, index: number) {
@@ -60,12 +60,26 @@ export async function POST(request: NextRequest) {
       );
     }, 0);
 
+    const date = String(item.date);
+    const dayName = String(item.dayName);
+    const planId = item.planId ? String(item.planId) : null;
+
+    if (
+      findExistingWorkoutLog({
+        date,
+        dayName,
+        planId,
+      })
+    ) {
+      continue;
+    }
+
     saveWorkoutLog({
-      id: `log-${String(item.date)}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      date: String(item.date),
-      dayName: String(item.dayName),
+      id: `log-${date}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      date,
+      dayName,
       weekStartDate: String(item.weekStartDate),
-      planId: item.planId ? String(item.planId) : null,
+      planId,
       entries: entries.filter((entry) => entry.completed),
       totalVolume,
       durationMinutes: item.durationMinutes ? Number(item.durationMinutes) : null,

@@ -46,6 +46,7 @@ type WorkoutLogFormProps = {
   planId: string;
   focus: string;
   exercises: WorkoutLogFormExercise[];
+  cardioOptions: Array<{ id: string; name: string }>;
 };
 
 type ExerciseSetState = {
@@ -127,6 +128,9 @@ function buildInitialExerciseState(exercises: WorkoutLogFormExercise[]) {
 type SavedSwapState = {
   exerciseState: Record<string, ExerciseState>;
   sessionNotes: string;
+  cardioExerciseId: string;
+  cardioDuration: string;
+  cardioNotes: string;
   logDate: string;
   sessionStartedAt: number | null;
 };
@@ -179,6 +183,10 @@ function hasLoggedReps(set: ExerciseSetState) {
 
 function formatPlannedScheme(exercise: WorkoutLogFormExercise) {
   return `${exercise.plannedSets} sets planned · ${exercise.plannedReps} · ${exercise.restSeconds}s rest`;
+}
+
+function getDefaultCardioExerciseId(cardioOptions: Array<{ id: string; name: string }>) {
+  return cardioOptions.find((option) => option.id === "incline-walk")?.id ?? cardioOptions[0]?.id ?? "incline-walk";
 }
 
 function CelebrationBanner() {
@@ -239,6 +247,7 @@ export function WorkoutLogForm({
   planId,
   focus,
   exercises,
+  cardioOptions,
 }: WorkoutLogFormProps) {
   const [formState, formAction] = useFormState(action, initialState);
   const [status, setStatus] = useState<string | null>(null);
@@ -246,6 +255,9 @@ export function WorkoutLogForm({
   const [sessionStartedAt, setSessionStartedAt] = useState<number | null>(null);
   const [sessionNow, setSessionNow] = useState(() => Date.now());
   const [sessionNotes, setSessionNotes] = useState("");
+  const [cardioExerciseId, setCardioExerciseId] = useState(() => getDefaultCardioExerciseId(cardioOptions));
+  const [cardioDuration, setCardioDuration] = useState("");
+  const [cardioNotes, setCardioNotes] = useState("");
   const [activeRestTimer, setActiveRestTimer] = useState<ActiveRestTimer | null>(null);
   const [showCelebration, setShowCelebration] = useState(false);
   const [logDate, setLogDate] = useState(actualDate);
@@ -274,6 +286,9 @@ export function WorkoutLogForm({
       return merged;
     });
     if (saved.sessionNotes) setSessionNotes(saved.sessionNotes);
+    if (saved.cardioExerciseId) setCardioExerciseId(saved.cardioExerciseId);
+    if (saved.cardioDuration) setCardioDuration(saved.cardioDuration);
+    if (saved.cardioNotes) setCardioNotes(saved.cardioNotes);
     if (saved.logDate) setLogDate(saved.logDate);
     if (saved.sessionStartedAt) setSessionStartedAt(saved.sessionStartedAt);
   }, []);
@@ -292,6 +307,8 @@ export function WorkoutLogForm({
 
   const allExercisesComplete =
     exercises.length > 0 && exercises.every((exercise) => completionMap[exercise.exerciseId]);
+  const cardioHasData = cardioDuration.trim().length > 0 || cardioNotes.trim().length > 0;
+  const cardioLabel = cardioOptions.find((option) => option.id === cardioExerciseId)?.name ?? "Incline Walk";
 
   useEffect(() => {
     if (!formState.message) {
@@ -328,8 +345,11 @@ export function WorkoutLogForm({
     setSessionStartedAt(null);
     setActiveRestTimer(null);
     setSessionNotes("");
+    setCardioExerciseId(getDefaultCardioExerciseId(cardioOptions));
+    setCardioDuration("");
+    setCardioNotes("");
     setStatus(null);
-  }, [exercises, formState.savedAt, formState.status]);
+  }, [actualDate, cardioOptions, exercises, formState.savedAt, formState.status]);
 
   useEffect(() => {
     setLogDate(actualDate);
@@ -476,6 +496,9 @@ export function WorkoutLogForm({
           setSessionStartedAt(null);
           setActiveRestTimer(null);
           setSessionNotes("");
+          setCardioExerciseId(getDefaultCardioExerciseId(cardioOptions));
+          setCardioDuration("");
+          setCardioNotes("");
           setStatus("Offline: workout queued and will sync when the device reconnects.");
           setToastMessage("Workout queued offline.");
         }}
@@ -486,6 +509,17 @@ export function WorkoutLogForm({
         <input type="hidden" name="weekStartDate" value={weekStartDate} />
         <input type="hidden" name="planId" value={planId} />
         <input type="hidden" name="durationMinutes" value={String(elapsedMinutes)} />
+        {cardioHasData ? (
+          <>
+            <input type="hidden" name="exerciseId" value={cardioExerciseId} />
+            <input type="hidden" name="exerciseName" value={cardioLabel} />
+            <input type="hidden" name="exerciseType" value="cardio" />
+            <input type="hidden" name={`${cardioExerciseId}-setCount`} value="1" />
+            <input type="hidden" name={`${cardioExerciseId}-completed`} value="true" />
+            <input type="hidden" name={`${cardioExerciseId}-0-duration`} value={cardioDuration} />
+            <input type="hidden" name={`${cardioExerciseId}-0-notes`} value={cardioNotes} />
+          </>
+        ) : null}
 
         <div className="grid gap-4 rounded-3xl border border-white/10 bg-slate-950/45 p-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
@@ -655,7 +689,7 @@ export function WorkoutLogForm({
                                 onChange={(event) =>
                                   updateSet(exercise.exerciseId, setIndex, "duration", event.target.value)
                                 }
-                                placeholder={showDuration ? "Duration (sec)" : "Duration (optional)"}
+                                placeholder={exercise.type === "cardio" ? "Duration (min)" : showDuration ? "Duration (sec)" : "Duration (optional)"}
                                 className="rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-slate-100 outline-none transition focus:border-sky-300/40"
                               />
                             )}
@@ -706,6 +740,61 @@ export function WorkoutLogForm({
           </p>
         )}
 
+        <section className="grid gap-4 rounded-3xl border border-white/10 bg-slate-950/45 p-4">
+          <div>
+            <h3 className="text-lg font-semibold text-slate-50">Cardio Add-On</h3>
+            <p className="mt-1 text-sm text-slate-400">Log your incline walk or other cardio that happened with this workout.</p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="grid gap-2 text-sm text-slate-300">
+              Activity
+              <select
+                value={cardioExerciseId}
+                onChange={(event) => {
+                  setCardioExerciseId(event.target.value);
+                  setStatus(null);
+                }}
+                className="rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-slate-100 outline-none transition focus:border-sky-300/40"
+              >
+                {cardioOptions.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="grid gap-2 text-sm text-slate-300">
+              Duration (min)
+              <input
+                type="number"
+                inputMode="numeric"
+                min="0"
+                value={cardioDuration}
+                onChange={(event) => {
+                  const nextValue = event.target.value;
+                  setCardioDuration(nextValue);
+                  ensureSessionStarted(nextValue);
+                  setStatus(null);
+                }}
+                placeholder="20"
+                className="rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-slate-100 outline-none transition focus:border-sky-300/40"
+              />
+            </label>
+          </div>
+          <input
+            type="text"
+            value={cardioNotes}
+            onChange={(event) => {
+              const nextValue = event.target.value;
+              setCardioNotes(nextValue);
+              ensureSessionStarted(nextValue);
+              setStatus(null);
+            }}
+            placeholder="Notes (incline, speed, distance, intervals, etc.)"
+            className="rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-slate-100 outline-none transition focus:border-sky-300/40"
+          />
+        </section>
+
         <input
           type="text"
           name="sessionNotes"
@@ -734,6 +823,9 @@ export function WorkoutLogForm({
           saveSwapState({
             exerciseState,
             sessionNotes,
+            cardioExerciseId,
+            cardioDuration,
+            cardioNotes,
             logDate,
             sessionStartedAt,
           });

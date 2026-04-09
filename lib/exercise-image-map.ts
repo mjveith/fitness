@@ -64,6 +64,7 @@ export const exerciseImageMap: Record<string, string> = {
   "bicycle-crunch": "Cross-Body_Crunch",
   "mountain-climber": "Mountain_Climbers",
   "front-plank": "Plank",
+  "incline-walk": "Walking_Treadmill",
   "side-plank": "Side_Bridge",
   "bear-crawl-hold": "Spider_Crawl",
   "plank-shoulder-tap": "Plank",

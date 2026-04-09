@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 import { SectionHeader } from "@/components/section-header";
 import { WorkoutLogForm } from "@/components/workout-log-form";
-import { getExerciseById, getLastExerciseEntry, getLastWeightForExercise } from "@/lib/db";
+import { getExerciseById, getLastExerciseEntry, getLastWeightForExercise, listExercises } from "@/lib/db";
 import { formatDate } from "@/lib/date";
 import { getOrCreateCurrentPlan } from "@/lib/plans";
 import { saveWorkoutLogAction } from "@/app/log/actions";
@@ -44,6 +44,10 @@ export default function LogPage({
         : null;
     })
     .filter((item): item is DetailedExercise => item !== null);
+  const cardioOptions = listExercises({ category: "cardio" }).map((exercise) => ({
+    id: exercise.id,
+    name: exercise.name,
+  }));
 
   return (
     <div className="space-y-6">
@@ -93,6 +97,7 @@ export default function LogPage({
             plannedReps: item.planExercise.reps,
             restSeconds: item.planExercise.restSeconds,
           }))}
+          cardioOptions={cardioOptions}
         />
       </section>
     </div>

@@ -4,7 +4,10 @@ import { useState } from "react";
 import Link from "next/link";
 import type { WorkoutLog } from "@/lib/types";
 
-function formatSet(set: { reps?: number; weight?: number; duration?: number; notes?: string }) {
+function formatSet(
+  set: { reps?: number; weight?: number; duration?: number; notes?: string },
+  type: WorkoutLog["entries"][number]["type"],
+) {
   if (typeof set.reps === "number" && typeof set.weight === "number") {
     return `${set.reps} × ${set.weight} lbs`;
   }
@@ -12,7 +15,7 @@ function formatSet(set: { reps?: number; weight?: number; duration?: number; not
     return `${set.reps} reps`;
   }
   if (typeof set.duration === "number") {
-    return `${set.duration}s`;
+    return type === "cardio" ? `${set.duration}m` : `${set.duration}s`;
   }
   return "—";
 }
@@ -80,7 +83,7 @@ export function WorkoutLogDetail({ log }: { log: WorkoutLog }) {
                   {entry.sets.map((set, idx) => (
                     <li key={idx} className="flex items-center gap-2 text-xs text-slate-300">
                       <span className="w-10 shrink-0 text-slate-500">Set {idx + 1}</span>
-                      <span>{formatSet(set)}</span>
+                      <span>{formatSet(set, entry.type)}</span>
                       {set.notes && (
                         <span className="text-slate-500 italic">({set.notes})</span>
                       )}

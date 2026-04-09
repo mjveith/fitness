@@ -277,6 +277,7 @@ const catalogBlueprints: Blueprint[] = [
     defaultRestSeconds: 45,
   }),
   ...createBlueprints("cardio", "cardio", "run", [
+    ["Incline Walk", ["treadmill"]],
     ["Treadmill Run", ["treadmill"]],
     ["Air Bike Sprint", ["air bike"]],
     ["Rowing Sprint", ["rower"]],

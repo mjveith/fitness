@@ -68,7 +68,7 @@ export default function ExerciseDetailPage({
                         ) : typeof set.reps === "number" ? (
                           <span>{set.reps} reps</span>
                         ) : typeof set.duration === "number" ? (
-                          <span>{set.duration}s</span>
+                          <span>{exercise.type === "cardio" ? `${set.duration}m` : `${set.duration}s`}</span>
                         ) : (
                           <span className="text-slate-500">—</span>
                         )}
