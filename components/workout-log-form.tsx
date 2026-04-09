@@ -294,7 +294,17 @@ export function WorkoutLogForm({
     exercises.length > 0 && exercises.every((exercise) => completionMap[exercise.exerciseId]);
 
   useEffect(() => {
-    if (formState.status === "success" && formState.message) {
+    if (!formState.message) {
+      return;
+    }
+
+    if (formState.status === "success") {
+      setToastMessage(formState.message);
+      return;
+    }
+
+    if (formState.status === "error") {
+      setStatus(formState.message);
       setToastMessage(formState.message);
     }
   }, [formState]);

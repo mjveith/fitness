@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { saveWorkoutLog } from "@/lib/db";
+import { findExistingWorkoutLog, saveWorkoutLog } from "@/lib/db";
 import { getWeekStart, formatDate } from "@/lib/date";
 import { WorkoutLog } from "@/lib/types";
 
@@ -92,6 +92,20 @@ export async function saveWorkoutLogAction(
     durationMinutes: numberOrUndefined(formData.get("durationMinutes")) ?? null,
     notes: String(formData.get("sessionNotes") ?? "").trim() || null,
   };
+
+  const existingLog = findExistingWorkoutLog({
+    date: actualDate,
+    dayName,
+    planId: planId || null,
+  });
+
+  if (existingLog) {
+    return {
+      status: "error",
+      message: "This workout has already been saved for that day.",
+      savedAt: null,
+    };
+  }
 
   try {
     saveWorkoutLog(log);

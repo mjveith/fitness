@@ -230,6 +230,45 @@ export function getWorkoutPlanByWeek(weekStartDate: string): WorkoutPlan | null 
   };
 }
 
+export function findExistingWorkoutLog(params: {
+  date: string;
+  dayName: string;
+  planId?: string | null;
+}) {
+  const db = getDb();
+  const row = db
+    .prepare(`
+      SELECT *
+      FROM workout_logs
+      WHERE date = @date
+        AND day_name = @dayName
+        AND ((plan_id IS NULL AND @planId IS NULL) OR plan_id = @planId)
+      ORDER BY created_at DESC
+      LIMIT 1
+    `)
+    .get({
+      date: params.date,
+      dayName: params.dayName,
+      planId: params.planId ?? null,
+    }) as Record<string, unknown> | undefined;
+
+  if (!row) {
+    return null;
+  }
+
+  return {
+    id: String(row.id),
+    date: String(row.date),
+    dayName: String(row.day_name),
+    weekStartDate: String(row.week_start_date),
+    planId: row.plan_id ? String(row.plan_id) : null,
+    entries: JSON.parse(String(row.entries_json)),
+    totalVolume: Number(row.total_volume),
+    durationMinutes: row.duration_minutes ? Number(row.duration_minutes) : null,
+    notes: row.notes ? String(row.notes) : null,
+  } as WorkoutLog;
+}
+
 export function saveWorkoutLog(log: WorkoutLog) {
   const db = getDb();
   db.prepare(`
