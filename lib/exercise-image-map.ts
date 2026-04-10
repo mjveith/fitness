@@ -17,6 +17,8 @@ export const exerciseImageMap: Record<string, string> = {
   "barbell-row": "Bent_Over_Barbell_Row",
   "seated-cable-row": "Seated_Cable_Rows",
   "single-arm-dumbbell-row": "One-Arm_Dumbbell_Row",
+  "chest-supported-row": "Dumbbell_Incline_Row",
+  "assisted-pull-up": "Band_Assisted_Pull-Up",
   "pull-up": "Pullups",
   "chin-up": "Chin-Up",
   "inverted-row": "Inverted_Row",
