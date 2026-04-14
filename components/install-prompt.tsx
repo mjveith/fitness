@@ -26,7 +26,7 @@ export function InstallPrompt() {
 
   return (
     <div className="glass-panel mb-6 rounded-3xl p-4">
-      <p className="text-sm font-medium text-slate-100">Install Fitness Planner for offline gym access.</p>
+      <p className="text-sm font-medium text-slate-100">Install Fitness for offline gym access.</p>
       <p className="mt-2 text-sm text-slate-300">
         Add it to your home screen to keep the exercise library and current week close at hand.
       </p>

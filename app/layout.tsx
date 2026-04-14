@@ -6,13 +6,13 @@ import { OfflineLogSync } from "@/components/offline-log-sync";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Fitness Planner",
+  title: "Fitness",
   description: "Mobile-first workout planning, logging, and exercise guidance.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Fitness Planner",
+    title: "Fitness",
   },
   icons: {
     apple: "/icons/icon-192.svg",

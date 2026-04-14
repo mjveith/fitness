@@ -1,4 +1,4 @@
-# Fitness Planner — V1 Spec
+# Fitness — V1 Spec
 
 ## Overview
 A Progressive Web App (PWA) for generating weekly workout schedules, logging exercises, and viewing instructional form diagrams. Must be accessible over cellular.

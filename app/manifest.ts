@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Fitness Planner",
-    short_name: "Planner",
+    name: "Fitness",
+    short_name: "Fitness",
     description: "Workout planning, exercise diagrams, and logging that works offline.",
     start_url: "/schedule",
     display: "standalone",
