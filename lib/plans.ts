@@ -173,28 +173,44 @@ function buildWorkoutSequence(
   coreTemplate: DayTemplate,
   workoutDays: number,
 ) {
-  if (workoutDays === 5) {
-    const chosenStrength = pickStrengthTemplates(strengthTemplates, 4);
+  const coreCount = workoutDays >= 5 ? 1 : 0;
+  const cardioCount = workoutDays > 3 && workoutDays !== 5 ? 1 : 0;
+  const strengthCount = Math.max(0, workoutDays - cardioCount - coreCount);
+  const chosenStrength = pickStrengthTemplates(strengthTemplates, strengthCount);
+
+  if (coreCount === 0 && cardioCount === 0) {
+    return chosenStrength;
+  }
+
+  if (coreCount === 1 && cardioCount === 0) {
     return [
       ...chosenStrength.slice(0, 2),
       coreTemplate,
       ...chosenStrength.slice(2),
-    ];
+    ].slice(0, workoutDays);
   }
 
-  const cardioCount = workoutDays > 3 ? 1 : 0;
-  const strengthCount = Math.max(0, workoutDays - cardioCount);
-  const chosenStrength = pickStrengthTemplates(strengthTemplates, strengthCount);
-
-  if (cardioCount === 0) {
-    return chosenStrength;
+  if (coreCount === 0 && cardioCount === 1) {
+    const separatorIndex = chosenStrength.length >= 4 ? 3 : Math.max(1, chosenStrength.length - 1);
+    return [
+      ...chosenStrength.slice(0, separatorIndex),
+      cardioTemplate,
+      ...chosenStrength.slice(separatorIndex),
+    ].slice(0, workoutDays);
   }
 
-  const separatorIndex = chosenStrength.length >= 4 ? 3 : Math.max(1, chosenStrength.length - 1);
+  const coreInsertIndex = Math.min(2, chosenStrength.length);
+  const strengthWithCore = [
+    ...chosenStrength.slice(0, coreInsertIndex),
+    coreTemplate,
+    ...chosenStrength.slice(coreInsertIndex),
+  ];
+  const cardioInsertIndex = strengthWithCore.length >= 5 ? 4 : Math.max(1, strengthWithCore.length - 1);
+
   return [
-    ...chosenStrength.slice(0, separatorIndex),
+    ...strengthWithCore.slice(0, cardioInsertIndex),
     cardioTemplate,
-    ...chosenStrength.slice(separatorIndex),
+    ...strengthWithCore.slice(cardioInsertIndex),
   ].slice(0, workoutDays);
 }
 
