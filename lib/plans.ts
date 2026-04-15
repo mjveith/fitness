@@ -33,6 +33,8 @@ type DayTemplate = {
   exercises: Exercise[];
 };
 
+const coreFocusSuffix = "Intentional core work for trunk strength and control";
+
 function chooseExercises(exercises: Exercise[], category: Exercise["category"], count: number, cursor: number) {
   const matching = exercises.filter((exercise) => exercise.category === category);
   return Array.from({ length: count }, (_, index) => matching[(cursor + index) % matching.length]);
@@ -96,6 +98,61 @@ function createTemplate(
   };
 }
 
+function addCoreTag(template: DayTemplate) {
+  return {
+    ...template,
+    workoutType: template.workoutType.includes("Core") ? template.workoutType : `${template.workoutType} + Core`,
+    focus: template.focus.includes(coreFocusSuffix) ? template.focus : `${template.focus}. ${coreFocusSuffix}`,
+    groups: template.groups.includes("core") ? template.groups : [...template.groups, "core"],
+  };
+}
+
+function injectCoreExercise(template: DayTemplate, coreExercise: Exercise, count: number) {
+  const nextExercises = trimExercises(template.exercises, count);
+
+  if (nextExercises.length < count) {
+    nextExercises.push(coreExercise);
+  } else {
+    const replaceIndex = nextExercises.findLastIndex((exercise) => exercise.category !== "core");
+    nextExercises[replaceIndex === -1 ? nextExercises.length - 1 : replaceIndex] = coreExercise;
+  }
+
+  return {
+    ...addCoreTag(template),
+    exercises: nextExercises,
+  };
+}
+
+function applyCoreDistribution(workoutSequence: DayTemplate[], coreExercises: Exercise[], exercisesPerWorkout: number, workoutDays: number) {
+  if (workoutDays >= 5) {
+    return workoutSequence;
+  }
+
+  const targetedPlacements = Math.min(
+    workoutDays >= 3 ? 3 : Math.min(workoutDays, 2),
+    workoutSequence.length,
+  );
+  const targetIndexes = workoutSequence
+    .map((template, index) => ({ template, index }))
+    .filter(({ template }) => template.exercises.length > 0 && !template.workoutType.includes("Cardio"))
+    .slice(0, targetedPlacements)
+    .map(({ index }) => index);
+
+  return workoutSequence.map((template, index) => {
+    const targetPosition = targetIndexes.indexOf(index);
+
+    if (targetPosition === -1) {
+      return template;
+    }
+
+    return injectCoreExercise(
+      template,
+      coreExercises[targetPosition % coreExercises.length],
+      exercisesPerWorkout,
+    );
+  });
+}
+
 function pickStrengthTemplates(templates: DayTemplate[], count: number) {
   const selected: DayTemplate[] = [];
   const remaining = [...templates];
@@ -110,7 +167,21 @@ function pickStrengthTemplates(templates: DayTemplate[], count: number) {
   return selected;
 }
 
-function buildWorkoutSequence(strengthTemplates: DayTemplate[], cardioTemplate: DayTemplate, workoutDays: number) {
+function buildWorkoutSequence(
+  strengthTemplates: DayTemplate[],
+  cardioTemplate: DayTemplate,
+  coreTemplate: DayTemplate,
+  workoutDays: number,
+) {
+  if (workoutDays === 5) {
+    const chosenStrength = pickStrengthTemplates(strengthTemplates, 4);
+    return [
+      ...chosenStrength.slice(0, 2),
+      coreTemplate,
+      ...chosenStrength.slice(2),
+    ];
+  }
+
   const cardioCount = workoutDays > 3 ? 1 : 0;
   const strengthCount = Math.max(0, workoutDays - cardioCount);
   const chosenStrength = pickStrengthTemplates(strengthTemplates, strengthCount);
@@ -170,12 +241,20 @@ function generateDays(config: PlanConfig, weekStartDate: string): WorkoutPlanDay
     ...chooseExercises(exercises, "core", 2, 1),
     ...chooseExercises(exercises, "plyo", 1, 2),
   ];
+  const coreMix = chooseExercises(exercises, "core", 6, 0);
 
   const cardioTemplate = createTemplate(
     "Sprint / Cardio",
     "Sprints, intervals, and conditioning only",
     ["cardio", "plyo"],
     cardioMix,
+    exercisesPerWorkout,
+  );
+  const coreTemplate = createTemplate(
+    "Core Strength",
+    "Dedicated abs and trunk stability work",
+    ["core"],
+    coreMix,
     exercisesPerWorkout,
   );
 
@@ -206,7 +285,12 @@ function generateDays(config: PlanConfig, weekStartDate: string): WorkoutPlanDay
     ],
   };
 
-  const workoutSequence = buildWorkoutSequence(templates[config.split], cardioTemplate, workoutDays);
+  const workoutSequence = applyCoreDistribution(
+    buildWorkoutSequence(templates[config.split], cardioTemplate, coreTemplate, workoutDays),
+    coreMix,
+    exercisesPerWorkout,
+    workoutDays,
+  );
   const restDays = Array.from({ length: 7 - workoutSequence.length }, () =>
     createTemplate("Rest / Recovery", "Walk, mobility, and easy recovery work", [], [], exercisesPerWorkout),
   );
