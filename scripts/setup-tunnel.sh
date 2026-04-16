@@ -1,5 +1,5 @@
 #!/bin/bash
-# Cloudflare Named Tunnel Setup for Fitness Planner
+# Cloudflare Named Tunnel Setup for Fitness
 # Run this once to set up a persistent tunnel with a stable URL
 
 set -e
