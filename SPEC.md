@@ -1,7 +1,7 @@
 # Fitness — V1 Spec
 
 ## Overview
-A Progressive Web App (PWA) for generating weekly workout schedules, logging exercises, and viewing instructional form diagrams. Must be accessible over cellular.
+A Progressive Web App (PWA) for generating weekly workout schedules, logging exercises, and viewing real-life instructional exercise media. Must be accessible over cellular.
 
 ## Tech Stack
 - **Frontend**: Next.js 14 (App Router) + Tailwind CSS + PWA (next-pwa)
@@ -26,7 +26,7 @@ A Progressive Web App (PWA) for generating weekly workout schedules, logging exe
   - Name and description
   - Target muscle groups (primary + secondary)
   - Equipment needed (or "none" for bodyweight)
-  - **Instructional SVG/illustration diagrams** showing proper form (start + end position)
+  - **Open-source real-life media pairs** showing proper form (start + end position)
   - Common cues/tips
 - Search and filter by muscle group, equipment, type
 
@@ -49,11 +49,11 @@ A Progressive Web App (PWA) for generating weekly workout schedules, logging exe
 - See weight/rep progression per exercise over time (simple list view, charts in V2)
 - Weekly summary: total volume, sessions completed vs planned
 
-### 5. Exercise Form Diagrams
-- Every exercise MUST have at least one instructional diagram
-- Use open-source exercise illustrations (musclewiki-style SVG or similar)
-- Fallback: generate simple stick-figure SVG diagrams showing key positions
-- Diagrams show: starting position, movement path, ending position
+### 5. Exercise Media
+- Every exercise MUST have at least one instructional media pair
+- Use open-source real-life images for start and end positions
+- No user-facing surface should rely on generated SVG exercise diagrams
+- Media should show: starting position, ending position, and enough framing to understand body setup
 - Displayed inline on exercise detail and during workout logging
 
 ## Data Model
@@ -96,13 +96,13 @@ id, date, planId?, exercises[{exerciseId, sets[{reps, weight?, duration?, notes?
 ## Out of Scope (V1)
 - AI-powered plan generation (V2 — use LLM to customize based on goals/history)
 - Social features / sharing
-- Video demonstrations (diagrams only for V1)
+- Video demonstrations (static real-life images only for V1)
 - Nutrition tracking
 - Heart rate / wearable integration
 - Charts/graphs (V2)
 
-## Exercise Diagram Strategy
+## Exercise Media Strategy
 For V1, use a combination of:
-1. **Open-source SVG exercise illustrations** — source from free/CC-licensed exercise databases
-2. **Programmatic SVG generation** — simple anatomical diagrams showing muscle activation + movement arrows
-3. Each exercise gets 2 diagrams minimum: start position + end position
+1. **Open-source real-life exercise photography** — source from reusable open-source repositories
+2. **Per-exercise media pairs** — each exercise gets 2 images minimum: start position + end position
+3. **Attribution-aware source mapping** — document source repo and per-exercise mapping in `MEDIA_SOURCING.md` and `lib/exercise-image-map.ts`

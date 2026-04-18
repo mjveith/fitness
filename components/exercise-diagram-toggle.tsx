@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { DiagramCard } from "@/components/diagram-card";
 
 const labels = [
   {
@@ -15,15 +14,21 @@ const labels = [
 ] as const;
 
 type Props = {
-  diagrams: string[];
   imageUrls?: [string, string] | null;
 };
 
-export function ExerciseDiagramToggle({ diagrams, imageUrls }: Props) {
+export function ExerciseDiagramToggle({ imageUrls }: Props) {
   const [index, setIndex] = useState(0);
   const activeLabel = labels[index] ?? labels[0];
-  const currentDiagram = diagrams[index] ?? diagrams[0] ?? "";
   const currentImageUrl = imageUrls?.[index] ?? imageUrls?.[0] ?? null;
+
+  if (!currentImageUrl) {
+    return (
+      <section className="rounded-3xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
+        Real-life exercise media is temporarily unavailable for this movement.
+      </section>
+    );
+  }
 
   return (
     <section className="grid gap-3">
@@ -48,23 +53,19 @@ export function ExerciseDiagramToggle({ diagrams, imageUrls }: Props) {
           );
         })}
       </div>
-      {currentImageUrl ? (
-        <figure className="overflow-hidden rounded-3xl border border-white/10 bg-slate-950/70">
-          <div className="bg-slate-950/70 p-4">
-            <img
-              src={currentImageUrl}
-              alt={`${activeLabel.button} for exercise demonstration`}
-              className="h-auto w-full object-contain"
-              loading="lazy"
-            />
-          </div>
-          <figcaption className="border-t border-white/10 px-4 py-3 text-sm text-slate-300">
-            {activeLabel.button} · real-life example
-          </figcaption>
-        </figure>
-      ) : (
-        <DiagramCard svg={currentDiagram} title={activeLabel.title} />
-      )}
+      <figure className="overflow-hidden rounded-3xl border border-white/10 bg-slate-950/70">
+        <div className="bg-slate-950/70 p-4">
+          <img
+            src={currentImageUrl}
+            alt={`${activeLabel.button} for exercise demonstration`}
+            className="h-auto w-full object-contain"
+            loading="lazy"
+          />
+        </div>
+        <figcaption className="border-t border-white/10 px-4 py-3 text-sm text-slate-300">
+          {activeLabel.button} · real-life example
+        </figcaption>
+      </figure>
     </section>
   );
 }

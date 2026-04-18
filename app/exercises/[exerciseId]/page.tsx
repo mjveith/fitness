@@ -24,7 +24,7 @@ export default function ExerciseDetailPage({
         title={exercise.name}
         description={exercise.description}
       />
-      <ExerciseDiagramToggle diagrams={exercise.diagrams} imageUrls={exercise.imageUrls} />
+      <ExerciseDiagramToggle imageUrls={exercise.imageUrls} />
       <section className="glass-panel rounded-3xl p-4">
         <h2 className="text-lg font-semibold text-slate-50">Coaching cues</h2>
         <ul className="mt-3 grid gap-2">

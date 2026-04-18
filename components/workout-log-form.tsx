@@ -645,7 +645,7 @@ export function WorkoutLogForm({
                     </div>
                   </div>
 
-                  <ExerciseDiagramToggle diagrams={exercise.diagrams} imageUrls={exercise.imageUrls} />
+                  <ExerciseDiagramToggle imageUrls={exercise.imageUrls} />
 
                   <div className="grid gap-3">
                     {state.sets.map((set, setIndex) => {

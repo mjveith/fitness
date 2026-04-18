@@ -13,7 +13,9 @@ export function ExerciseCard({ exercise, view = "grid" }: { exercise: Exercise; 
             loading="lazy"
           />
         ) : (
-          <div dangerouslySetInnerHTML={{ __html: exercise.diagrams[0] }} />
+          <div className="flex h-full min-h-40 items-center justify-center bg-amber-400/10 p-4 text-center text-sm text-amber-100">
+            Real-life preview coming soon
+          </div>
         )}
       </div>
       <div className="space-y-3">

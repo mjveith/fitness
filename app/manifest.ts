@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Fitness",
     short_name: "Fitness",
-    description: "Workout planning, exercise diagrams, and logging that works offline.",
+    description: "Workout planning, real-life exercise media, and logging that works offline.",
     start_url: "/schedule",
     display: "standalone",
     background_color: "#050816",
