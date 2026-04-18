@@ -40,6 +40,11 @@ function chooseExercises(exercises: Exercise[], category: Exercise["category"], 
   return Array.from({ length: count }, (_, index) => matching[(cursor + index) % matching.length]);
 }
 
+function chooseNamedExercises(exercises: Exercise[], names: string[]) {
+  const lookup = new Map(exercises.map((exercise) => [exercise.name, exercise]));
+  return names.map((name) => lookup.get(name)).filter((exercise): exercise is Exercise => Boolean(exercise));
+}
+
 function buildDay(
   index: number,
   date: string,
@@ -220,20 +225,28 @@ function generateDays(config: PlanConfig, weekStartDate: string): WorkoutPlanDay
   const exercisesPerWorkout = clamp(config.exercisesPerWorkout, minExercisesPerWorkout, maxExercisesPerWorkout);
   const workoutDays = clamp(config.workoutDays, minWorkoutDays, maxWorkoutDays);
 
+  const obliqueCoreMix = chooseNamedExercises(exercises, [
+    "Side Plank",
+    "Side Plank Reach-Through",
+    "Copenhagen Side Plank",
+    "Bicycle Crunch",
+    "Heel Tap Crunch",
+    "Dead Bug",
+  ]);
   const pushMix = [
     ...chooseExercises(exercises, "chest", 3, 0),
     ...chooseExercises(exercises, "shoulders", 2, 0),
     ...chooseExercises(exercises, "arms", 2, 0),
-    ...chooseExercises(exercises, "core", 1, 0),
+    ...obliqueCoreMix.slice(0, 1),
   ];
   const pullMix = [
     ...chooseExercises(exercises, "back", 5, 0),
-    ...chooseExercises(exercises, "core", 2, 1),
+    ...obliqueCoreMix.slice(1, 3),
     ...chooseExercises(exercises, "shoulders", 1, 2),
   ];
   const legMix = [
     ...chooseExercises(exercises, "legs", 6, 0),
-    ...chooseExercises(exercises, "core", 2, 0),
+    ...obliqueCoreMix.slice(2, 4),
   ];
   const cardioMix = [
     ...chooseExercises(exercises, "cardio", 4, 0),
@@ -244,20 +257,22 @@ function generateDays(config: PlanConfig, weekStartDate: string): WorkoutPlanDay
     ...chooseExercises(exercises, "back", 2, 1),
     ...chooseExercises(exercises, "shoulders", 2, 1),
     ...chooseExercises(exercises, "arms", 1, 2),
-    ...chooseExercises(exercises, "core", 1, 3),
+    ...obliqueCoreMix.slice(3, 4),
   ];
   const fullBodyMix = [
     ...chooseExercises(exercises, "legs", 2, 2),
     ...chooseExercises(exercises, "chest", 2, 1),
     ...chooseExercises(exercises, "back", 2, 3),
-    ...chooseExercises(exercises, "core", 2, 2),
+    ...obliqueCoreMix.slice(0, 2),
   ];
   const lowerVolumeMix = [
     ...chooseExercises(exercises, "legs", 5, 3),
-    ...chooseExercises(exercises, "core", 2, 1),
+    ...obliqueCoreMix.slice(4, 6),
     ...chooseExercises(exercises, "plyo", 1, 2),
   ];
-  const coreMix = chooseExercises(exercises, "core", 6, 0);
+  const coreMix = [...obliqueCoreMix, ...chooseExercises(exercises, "core", 6, 0)].filter(
+    (exercise, index, collection) => collection.findIndex((item) => item.id === exercise.id) === index,
+  );
 
   const cardioTemplate = createTemplate(
     "Sprint / Cardio",
@@ -281,7 +296,7 @@ function generateDays(config: PlanConfig, weekStartDate: string): WorkoutPlanDay
       createTemplate("Leg Strength", "Quads, glutes, hamstrings", ["legs"], legMix, exercisesPerWorkout),
       createTemplate("Upper", "Balanced press and pull accessories", ["chest", "back"], upperMix, exercisesPerWorkout),
       createTemplate("Lower Volume", "Single-leg work and posterior chain", ["legs"], lowerVolumeMix, exercisesPerWorkout),
-      createTemplate("Shoulders + Core", "Delts, posture, and trunk control", ["shoulders"], [...chooseExercises(exercises, "shoulders", 5, 0), ...chooseExercises(exercises, "core", 3, 0)], exercisesPerWorkout),
+      createTemplate("Shoulders + Core", "Delts, posture, and trunk control", ["shoulders"], [...chooseExercises(exercises, "shoulders", 5, 0), ...obliqueCoreMix.slice(0, 3)], exercisesPerWorkout),
     ],
     "upper-lower": [
       createTemplate("Upper Strength", "Chest, back, and shoulders", ["chest", "back", "shoulders"], upperMix, exercisesPerWorkout),
@@ -294,7 +309,7 @@ function generateDays(config: PlanConfig, weekStartDate: string): WorkoutPlanDay
     "full-body": [
       createTemplate("Full Body A", "Squat, press, row", ["legs", "chest", "back", "core"], fullBodyMix, exercisesPerWorkout),
       createTemplate("Full Body B", "Hinge, pull, unilateral work", ["legs", "chest", "back", "core"], [...fullBodyMix].reverse(), exercisesPerWorkout),
-      createTemplate("Full Body C", "Strength plus trunk stability", ["legs", "chest", "back", "core"], [...fullBodyMix, ...chooseExercises(exercises, "core", 2, 4)], exercisesPerWorkout),
+      createTemplate("Full Body C", "Strength plus trunk stability", ["legs", "chest", "back", "core"], [...fullBodyMix, ...obliqueCoreMix.slice(2, 4)], exercisesPerWorkout),
       createTemplate("Lower Power", "Jump, hinge, and squat emphasis", ["legs"], lowerVolumeMix, exercisesPerWorkout),
       createTemplate("Upper Balance", "Press, row, and scapular control", ["chest", "back"], upperMix, exercisesPerWorkout),
       createTemplate("Full Body D", "Mixed compound strength", ["legs", "chest", "back", "core"], [...fullBodyMix, ...chooseExercises(exercises, "legs", 2, 5)], exercisesPerWorkout),

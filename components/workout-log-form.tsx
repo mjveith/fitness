@@ -125,12 +125,15 @@ function buildInitialExerciseState(exercises: WorkoutLogFormExercise[]) {
   ) as Record<string, ExerciseState>;
 }
 
+type CardioStatus = "completed" | "skipped" | "removed";
+
 type SavedSwapState = {
   exerciseState: Record<string, ExerciseState>;
   sessionNotes: string;
   cardioExerciseId: string;
   cardioDuration: string;
   cardioNotes: string;
+  cardioStatus: CardioStatus;
   logDate: string;
   sessionStartedAt: number | null;
 };
@@ -258,6 +261,7 @@ export function WorkoutLogForm({
   const [cardioExerciseId, setCardioExerciseId] = useState(() => getDefaultCardioExerciseId(cardioOptions));
   const [cardioDuration, setCardioDuration] = useState("");
   const [cardioNotes, setCardioNotes] = useState("");
+  const [cardioStatus, setCardioStatus] = useState<CardioStatus>("removed");
   const [activeRestTimer, setActiveRestTimer] = useState<ActiveRestTimer | null>(null);
   const [showCelebration, setShowCelebration] = useState(false);
   const [logDate, setLogDate] = useState(actualDate);
@@ -289,6 +293,7 @@ export function WorkoutLogForm({
     if (saved.cardioExerciseId) setCardioExerciseId(saved.cardioExerciseId);
     if (saved.cardioDuration) setCardioDuration(saved.cardioDuration);
     if (saved.cardioNotes) setCardioNotes(saved.cardioNotes);
+    if (saved.cardioStatus) setCardioStatus(saved.cardioStatus);
     if (saved.logDate) setLogDate(saved.logDate);
     if (saved.sessionStartedAt) setSessionStartedAt(saved.sessionStartedAt);
   }, []);
@@ -308,6 +313,7 @@ export function WorkoutLogForm({
   const allExercisesComplete =
     exercises.length > 0 && exercises.every((exercise) => completionMap[exercise.exerciseId]);
   const cardioHasData = cardioDuration.trim().length > 0 || cardioNotes.trim().length > 0;
+  const cardioShouldSave = cardioStatus === "completed" || cardioStatus === "skipped";
   const cardioLabel = cardioOptions.find((option) => option.id === cardioExerciseId)?.name ?? "Incline Walk";
 
   useEffect(() => {
@@ -348,6 +354,7 @@ export function WorkoutLogForm({
     setCardioExerciseId(getDefaultCardioExerciseId(cardioOptions));
     setCardioDuration("");
     setCardioNotes("");
+    setCardioStatus("removed");
     setStatus(null);
   }, [actualDate, cardioOptions, exercises, formState.savedAt, formState.status]);
 
@@ -499,6 +506,7 @@ export function WorkoutLogForm({
           setCardioExerciseId(getDefaultCardioExerciseId(cardioOptions));
           setCardioDuration("");
           setCardioNotes("");
+          setCardioStatus("removed");
           setStatus("Offline: workout queued and will sync when the device reconnects.");
           setToastMessage("Workout queued offline.");
         }}
@@ -509,14 +517,15 @@ export function WorkoutLogForm({
         <input type="hidden" name="weekStartDate" value={weekStartDate} />
         <input type="hidden" name="planId" value={planId} />
         <input type="hidden" name="durationMinutes" value={String(elapsedMinutes)} />
-        {cardioHasData ? (
+        {cardioShouldSave ? (
           <>
             <input type="hidden" name="exerciseId" value={cardioExerciseId} />
             <input type="hidden" name="exerciseName" value={cardioLabel} />
             <input type="hidden" name="exerciseType" value="cardio" />
-            <input type="hidden" name={`${cardioExerciseId}-setCount`} value="1" />
-            <input type="hidden" name={`${cardioExerciseId}-completed`} value="true" />
-            <input type="hidden" name={`${cardioExerciseId}-0-duration`} value={cardioDuration} />
+            <input type="hidden" name={`${cardioExerciseId}-setCount`} value={cardioStatus === "completed" ? "1" : "0"} />
+            <input type="hidden" name={`${cardioExerciseId}-status`} value={cardioStatus} />
+            <input type="hidden" name={`${cardioExerciseId}-completed`} value={cardioStatus === "completed" ? "true" : "false"} />
+            <input type="hidden" name={`${cardioExerciseId}-0-duration`} value={cardioStatus === "completed" ? cardioDuration : ""} />
             <input type="hidden" name={`${cardioExerciseId}-0-notes`} value={cardioNotes} />
           </>
         ) : null}
@@ -743,7 +752,49 @@ export function WorkoutLogForm({
         <section className="grid gap-4 rounded-3xl border border-white/10 bg-slate-950/45 p-4">
           <div>
             <h3 className="text-lg font-semibold text-slate-50">Cardio Add-On</h3>
-            <p className="mt-1 text-sm text-slate-400">Log your incline walk or other cardio that happened with this workout.</p>
+            <p className="mt-1 text-sm text-slate-400">Keep cardio, mark it skipped, or remove it from this session entirely.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setCardioStatus("completed");
+                ensureSessionStarted("1");
+                setStatus(null);
+              }}
+              className={`rounded-full px-3 py-2 text-xs font-semibold transition ${
+                cardioStatus === "completed" ? "bg-sky-300 text-slate-950" : "border border-white/10 bg-white/5 text-slate-300"
+              }`}
+            >
+              Complete cardio
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setCardioStatus("skipped");
+                ensureSessionStarted("1");
+                setStatus(null);
+              }}
+              className={`rounded-full px-3 py-2 text-xs font-semibold transition ${
+                cardioStatus === "skipped" ? "bg-amber-300 text-slate-950" : "border border-white/10 bg-white/5 text-slate-300"
+              }`}
+            >
+              Mark skipped
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setCardioStatus("removed");
+                setCardioDuration("");
+                setCardioNotes("");
+                setStatus(null);
+              }}
+              className={`rounded-full px-3 py-2 text-xs font-semibold transition ${
+                cardioStatus === "removed" ? "bg-slate-200 text-slate-950" : "border border-white/10 bg-white/5 text-slate-300"
+              }`}
+            >
+              Remove cardio
+            </button>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="grid gap-2 text-sm text-slate-300">
@@ -752,6 +803,9 @@ export function WorkoutLogForm({
                 value={cardioExerciseId}
                 onChange={(event) => {
                   setCardioExerciseId(event.target.value);
+                  if (cardioStatus === "removed") {
+                    setCardioStatus("completed");
+                  }
                   setStatus(null);
                 }}
                 className="rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-slate-100 outline-none transition focus:border-sky-300/40"
@@ -773,6 +827,9 @@ export function WorkoutLogForm({
                 onChange={(event) => {
                   const nextValue = event.target.value;
                   setCardioDuration(nextValue);
+                  if (nextValue.trim()) {
+                    setCardioStatus("completed");
+                  }
                   ensureSessionStarted(nextValue);
                   setStatus(null);
                 }}
@@ -787,6 +844,9 @@ export function WorkoutLogForm({
             onChange={(event) => {
               const nextValue = event.target.value;
               setCardioNotes(nextValue);
+              if (nextValue.trim() && cardioStatus === "removed") {
+                setCardioStatus("skipped");
+              }
               ensureSessionStarted(nextValue);
               setStatus(null);
             }}
@@ -826,6 +886,7 @@ export function WorkoutLogForm({
             cardioExerciseId,
             cardioDuration,
             cardioNotes,
+            cardioStatus,
             logDate,
             sessionStartedAt,
           });

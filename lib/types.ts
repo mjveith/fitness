@@ -63,11 +63,14 @@ export type LoggedSet = {
   notes?: string;
 };
 
+export type WorkoutLogEntryStatus = "completed" | "skipped" | "removed";
+
 export type WorkoutLogEntry = {
   exerciseId: string;
   name: string;
   type: ExerciseType;
   completed: boolean;
+  status?: WorkoutLogEntryStatus;
   actualSetCount: number;
   sets: LoggedSet[];
 };

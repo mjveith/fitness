@@ -67,17 +67,24 @@ export function WorkoutLogDetail({ log }: { log: WorkoutLog }) {
                 className="rounded-2xl border border-white/10 bg-slate-900/50 p-3"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <Link
-                    href={`/exercises/${entry.exerciseId}`}
-                    className="text-sm font-medium text-sky-200 hover:text-sky-100 transition"
-                  >
-                    {entry.name}
-                  </Link>
-                  {vol > 0 && (
+                  <div className="min-w-0">
+                    <Link
+                      href={`/exercises/${entry.exerciseId}`}
+                      className="text-sm font-medium text-sky-200 hover:text-sky-100 transition"
+                    >
+                      {entry.name}
+                    </Link>
+                    {entry.status === "skipped" ? (
+                      <p className="mt-1 text-xs font-medium uppercase tracking-[0.2em] text-amber-300">Skipped</p>
+                    ) : null}
+                  </div>
+                  {vol > 0 ? (
                     <span className="shrink-0 text-xs text-slate-500">
                       vol {vol.toFixed(0)}
                     </span>
-                  )}
+                  ) : entry.status === "skipped" ? (
+                    <span className="shrink-0 text-xs text-amber-300/80">not completed</span>
+                  ) : null}
                 </div>
                 <ul className="mt-2 grid gap-1">
                   {entry.sets.map((set, idx) => (
@@ -90,6 +97,9 @@ export function WorkoutLogDetail({ log }: { log: WorkoutLog }) {
                     </li>
                   ))}
                 </ul>
+                {entry.status === "skipped" && entry.sets.length === 0 ? (
+                  <p className="mt-2 text-xs italic text-slate-400">Saved as intentionally skipped.</p>
+                ) : null}
               </div>
             );
           })}

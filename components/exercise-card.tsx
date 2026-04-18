@@ -5,7 +5,16 @@ export function ExerciseCard({ exercise, view = "grid" }: { exercise: Exercise; 
   const body = (
     <>
       <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-950/80">
-        <div dangerouslySetInnerHTML={{ __html: exercise.diagrams[0] }} />
+        {exercise.imageUrls?.[0] ? (
+          <img
+            src={exercise.imageUrls[0]}
+            alt={`${exercise.name} start position example`}
+            className="h-full w-full object-cover"
+            loading="lazy"
+          />
+        ) : (
+          <div dangerouslySetInnerHTML={{ __html: exercise.diagrams[0] }} />
+        )}
       </div>
       <div className="space-y-3">
         <div>

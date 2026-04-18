@@ -59,7 +59,7 @@ export function ExerciseDiagramToggle({ diagrams, imageUrls }: Props) {
             />
           </div>
           <figcaption className="border-t border-white/10 px-4 py-3 text-sm text-slate-300">
-            {activeLabel.button}
+            {activeLabel.button} · real-life example
           </figcaption>
         </figure>
       ) : (

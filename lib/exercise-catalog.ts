@@ -248,10 +248,12 @@ const catalogBlueprints: Blueprint[] = [
     defaultRestSeconds: 45,
   }),
   ...createBlueprints("core", "bodyweight", "rotation", [
-    ["Russian Twist", ["medicine ball"]],
     ["Dead Bug", ["none"]],
     ["Bicycle Crunch", ["mat"]],
     ["Mountain Climber", ["none"]],
+    ["Side Plank Reach-Through", ["none"]],
+    ["Heel Tap Crunch", ["mat"]],
+    ["Copenhagen Side Plank", ["bench"]],
   ], {
     primary: ["obliques"],
     secondary: ["abs", "hip flexors"],
@@ -872,7 +874,6 @@ function buildDiagram(
 ) {
   const pose = figurePose(movement, phase);
   const label = phase === "start" ? "Start Position" : "End Position";
-  const animationName = `flow-${slugify(name)}-${phase}`;
   const accent = category === "cardio" || category === "plyo" ? "#38bdf8" : "#7dd3fc";
   const headRadius = movement === "pushup" || movement === "plank" ? 10 : 14;
 
@@ -890,12 +891,6 @@ function buildDiagram(
           </feMerge>
         </filter>
       </defs>
-      <style>
-        @keyframes ${animationName} {
-          from { stroke-dashoffset: 26; }
-          to { stroke-dashoffset: 0; }
-        }
-      </style>
       <rect width="200" height="232" rx="30" fill="#081121" />
       <rect x="12" y="12" width="176" height="208" rx="26" fill="rgba(15, 23, 42, 0.84)" stroke="rgba(148, 163, 184, 0.24)" />
       <rect x="20" y="18" width="160" height="24" rx="12" fill="rgba(2, 6, 23, 0.72)" />
@@ -927,7 +922,7 @@ function buildDiagram(
           ${joint(pose.kneeRight, 3.2)}
         </g>
         ${muscleHighlights(pose, primary, secondary)}
-        <path d="${pose.arrow}" fill="none" stroke="#7dd3fc" stroke-width="5.5" stroke-linecap="round" stroke-dasharray="8 8" marker-end="url(#arrow-${slugify(name)}-${phase})" filter="url(#glow-${slugify(name)}-${phase})" vector-effect="non-scaling-stroke" style="animation:${animationName} 1.1s linear infinite" />
+        <path d="${pose.arrow}" fill="none" stroke="#7dd3fc" stroke-width="5.5" stroke-linecap="round" stroke-dasharray="8 8" marker-end="url(#arrow-${slugify(name)}-${phase})" filter="url(#glow-${slugify(name)}-${phase})" vector-effect="non-scaling-stroke" />
       </g>
       <rect x="34" y="204" width="132" height="14" rx="7" fill="rgba(2, 6, 23, 0.72)" />
       <text x="100" y="214" fill="#e2e8f0" font-family="Arial, sans-serif" font-size="10" letter-spacing="1.6" text-anchor="middle">${label.toUpperCase()}</text>

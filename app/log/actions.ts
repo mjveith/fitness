@@ -40,11 +40,15 @@ function parseExerciseEntries(params: {
       };
     }).filter((set) => set.reps || set.weight || set.duration || set.notes);
 
+    const status = String(getValue(`${exerciseId}-status`) ?? "completed") as WorkoutLog["entries"][number]["status"];
+    const completed = String(getValue(`${exerciseId}-completed`) ?? String(status === "completed")) === "true";
+
     return {
       exerciseId,
       name: exerciseNames[index],
       type: exerciseTypes[index] as WorkoutLog["entries"][number]["type"],
-      completed: String(getValue(`${exerciseId}-completed`) ?? "false") === "true",
+      completed,
+      status,
       actualSetCount: setCount,
       sets,
     };
@@ -87,7 +91,7 @@ export async function saveWorkoutLogAction(
     dayName,
     weekStartDate,
     planId: planId || null,
-    entries: entries.filter((entry) => entry.completed),
+    entries: entries.filter((entry) => entry.completed || entry.status === "skipped"),
     totalVolume,
     durationMinutes: numberOrUndefined(formData.get("durationMinutes")) ?? null,
     notes: String(formData.get("sessionNotes") ?? "").trim() || null,
