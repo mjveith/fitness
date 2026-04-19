@@ -13,9 +13,15 @@ This app now avoids the original generated SVG exercise diagrams on all user-fac
 ### 2. gsuiffet/openfit
 - Repo: https://github.com/gsuiffet/openfit
 - Delivery: raw GitHub WebP image pairs under `exercises/<id>/images/0.webp` and `1.webp`
-- Usage here: fills gaps for movements not covered well enough by the primary source
-- Current mappings: `sled-push`, `farmer-carry-march`
+- Usage here: optional secondary source when a movement is not covered well enough by the primary source
 - License note: verify and preserve upstream repository license/terms when redistributing or mirroring
+
+### 3. Wikimedia Commons
+- Search: https://commons.wikimedia.org/wiki/Special:MediaSearch
+- Delivery: canonical upload URLs under `https://upload.wikimedia.org/wikipedia/commons/...`
+- Usage here: fills remaining gaps when exercise-library repositories do not provide a working real-life pair
+- Current mappings: `burpee`
+- License note: keep per-file attribution/description links in the source map review notes when using Commons assets
 
 ## Mapping contract
 - Source mapping lives in `lib/exercise-image-map.ts`
@@ -27,7 +33,7 @@ This app now avoids the original generated SVG exercise diagrams on all user-fac
   - exercise library cards
   - exercise detail page
   - workout log form
-- A regression test in `tests/exercise-media-coverage.test.cjs` now fails if any catalog exercise lacks a two-image media pair or if any mapped asset is an SVG.
+- A regression test in `tests/exercise-media-coverage.test.cjs` now fails if any catalog exercise lacks a two-image media pair, if any mapped asset is an SVG, or if any mapped media URL returns a non-200 response.
 
 ## Gap-fill fallback mappings added for FP-015
 These exercise ids were missing direct coverage and now use the closest real-life open-source movement pair available from the upstream repos above:
@@ -42,6 +48,7 @@ These exercise ids were missing direct coverage and now use the closest real-lif
 - `single-arm-cable-extension` → `Cable_One_Arm_Tricep_Extension` (free-exercise-db)
 - `curtsy-lunge` → `Dumbbell_Rear_Lunge` (free-exercise-db)
 - `treadmill-run` → `Running_Treadmill` (free-exercise-db)
+- `burpee` → `Burpee_2_Squat.jpg` + `Burpee_5_Thrust.jpg` (Wikimedia Commons)
 - `air-bike-sprint` → `Air_Bike` (free-exercise-db)
 - `rowing-sprint` → `Rowing_Stationary` (free-exercise-db)
 - `jump-rope` → `Rope_Jumping` (free-exercise-db)
@@ -51,6 +58,8 @@ These exercise ids were missing direct coverage and now use the closest real-lif
 - `assault-runner-push` → `Running_Treadmill` (free-exercise-db)
 - `cycling-sprint` → `Bicycling_Stationary` (free-exercise-db)
 - `sled-pull` → `Sled_Drag_-_Harness` (free-exercise-db)
+- `sled-push` → `Sled_Push` (free-exercise-db)
+- `farmer-carry-march` → `Farmers_Walk` (free-exercise-db)
 - `shadow-boxing-intervals` → `Heavy_Bag_Thrust` (free-exercise-db)
 - `broad-jump` → `Standing_Long_Jump` (free-exercise-db)
 - `skater-hop` → `Single-Leg_Lateral_Hop` (free-exercise-db)

@@ -1,5 +1,6 @@
 const FREE_EXERCISE_DB_BASE = "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises";
 const OPENFIT_BASE = "https://raw.githubusercontent.com/gsuiffet/openfit/master/exercises";
+const WIKIMEDIA_COMMONS_BASE = "https://upload.wikimedia.org/wikipedia/commons";
 
 function freeExercisePair(id: string): [string, string] {
   return [`${FREE_EXERCISE_DB_BASE}/${id}/0.jpg`, `${FREE_EXERCISE_DB_BASE}/${id}/1.jpg`];
@@ -7,6 +8,10 @@ function freeExercisePair(id: string): [string, string] {
 
 function openfitPair(id: string): [string, string] {
   return [`${OPENFIT_BASE}/${id}/images/0.webp`, `${OPENFIT_BASE}/${id}/images/1.webp`];
+}
+
+function wikimediaPair(startPath: string, endPath: string): [string, string] {
+  return [`${WIKIMEDIA_COMMONS_BASE}/${startPath}`, `${WIKIMEDIA_COMMONS_BASE}/${endPath}`];
 }
 
 export const exerciseImageMap: Record<string, [string, string]> = {
@@ -106,11 +111,11 @@ export const exerciseImageMap: Record<string, [string, string]> = {
   "hanging-knee-raise": freeExercisePair("Hanging_Leg_Raise"),
   "box-jump": freeExercisePair("Box_Jump_Multiple_Response"),
   "jump-squat": freeExercisePair("Freehand_Jump_Squat"),
-  burpee: freeExercisePair("Burpee"),
+  burpee: wikimediaPair("c/c5/Burpee_2_Squat.jpg", "f/f5/Burpee_5_Thrust.jpg"),
   "kettlebell-swing": freeExercisePair("One-Arm_Kettlebell_Swings"),
-  "sled-push": openfitPair("sled-push"),
+  "sled-push": freeExercisePair("Sled_Push"),
   "sled-pull": freeExercisePair("Sled_Drag_-_Harness"),
-  "farmer-carry-march": openfitPair("farmer-carry-march"),
+  "farmer-carry-march": freeExercisePair("Farmers_Walk"),
   "shadow-boxing-intervals": freeExercisePair("Heavy_Bag_Thrust"),
   "broad-jump": freeExercisePair("Standing_Long_Jump"),
   "skater-hop": freeExercisePair("Single-Leg_Lateral_Hop"),
