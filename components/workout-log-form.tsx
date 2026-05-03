@@ -8,6 +8,7 @@ import { RestTimer } from "@/components/rest-timer";
 import { SessionTimer } from "@/components/session-timer";
 import { Toast } from "@/components/toast";
 import type { SaveWorkoutLogActionState } from "@/app/log/actions";
+import { createBlankSessionSet, deriveExerciseComplete } from "@/lib/workout-completion";
 import type { ExerciseCategory, ExerciseType, LoggedSet } from "@/lib/types";
 
 const queueKey = "fp-pending-logs-v1";
@@ -75,50 +76,19 @@ type ActiveSwapTarget = {
   exerciseIndex: number;
 };
 
-function createEmptySet(defaultWeight?: number | null): ExerciseSetState {
-  return {
-    reps: "",
-    weight: typeof defaultWeight === "number" ? String(defaultWeight) : "",
-    duration: "",
-    notes: "",
-  };
-}
-
-function createSeededSet(previousSet: LoggedSet | undefined, defaultWeight?: number | null): ExerciseSetState {
-  return {
-    reps: typeof previousSet?.reps === "number" ? String(previousSet.reps) : "",
-    weight:
-      typeof previousSet?.weight === "number"
-        ? String(previousSet.weight)
-        : typeof defaultWeight === "number"
-          ? String(defaultWeight)
-          : "",
-    duration: typeof previousSet?.duration === "number" ? String(previousSet.duration) : "",
-    notes: previousSet?.notes ?? "",
-  };
+function createEmptySet(): ExerciseSetState {
+  return createBlankSessionSet();
 }
 
 function buildInitialExerciseState(exercises: WorkoutLogFormExercise[]) {
   return Object.fromEntries(
     exercises.map((exercise) => {
       const setCount = Math.max(1, exercise.plannedSets || 3);
-      const hasCarryover = Boolean(
-        exercise.lastEntrySets?.some(
-          (set) =>
-            typeof set.reps === "number" ||
-            typeof set.weight === "number" ||
-            typeof set.duration === "number" ||
-            Boolean(set.notes?.trim()),
-        ),
-      );
-
       return [
         exercise.exerciseId,
         {
-          sets: Array.from({ length: setCount }, (_, index) =>
-            createSeededSet(exercise.lastEntrySets?.[index], exercise.lastWeight),
-          ),
-          manualComplete: hasCarryover ? false : null,
+          sets: Array.from({ length: setCount }, () => createEmptySet()),
+          manualComplete: null,
         },
       ];
     }),
@@ -180,12 +150,19 @@ function isSetEmpty(set: ExerciseSetState) {
   return !set.reps.trim() && !set.weight.trim() && !set.duration.trim() && !set.notes.trim();
 }
 
-function hasLoggedReps(set: ExerciseSetState) {
-  return set.reps.trim().length > 0;
-}
-
 function formatPlannedScheme(exercise: WorkoutLogFormExercise) {
   return `${exercise.plannedSets} sets planned · ${exercise.plannedReps} · ${exercise.restSeconds}s rest`;
+}
+
+function formatLastTimeSet(set: LoggedSet, index: number) {
+  const details = [
+    typeof set.reps === "number" ? `${set.reps} reps` : null,
+    typeof set.weight === "number" ? `${set.weight} lb` : null,
+    typeof set.duration === "number" ? `${set.duration} min` : null,
+    set.notes?.trim() ? set.notes.trim() : null,
+  ].filter(Boolean);
+
+  return `Set ${index + 1}: ${details.length ? details.join(" · ") : "logged"}`;
 }
 
 function getDefaultCardioExerciseId(cardioOptions: Array<{ id: string; name: string }>) {
@@ -302,10 +279,10 @@ export function WorkoutLogForm({
     return Object.fromEntries(
       exercises.map((exercise) => {
         const state = exerciseState[exercise.exerciseId];
-        const autoComplete =
-          state.sets.length > 0 && state.sets.every((set) => hasLoggedReps(set));
-        const complete = state.manualComplete ?? autoComplete;
-        return [exercise.exerciseId, complete];
+        return [
+          exercise.exerciseId,
+          deriveExerciseComplete({ sets: state.sets, manualComplete: state.manualComplete }),
+        ];
       }),
     );
   }, [exerciseState, exercises]);
@@ -399,7 +376,7 @@ export function WorkoutLogForm({
       const next = { ...current };
       const exercise = next[exerciseId];
       const sets = exercise.sets.map((set, index) => (index === setIndex ? { ...set, [key]: value } : set));
-      next[exerciseId] = { ...exercise, sets };
+      next[exerciseId] = { ...exercise, sets, manualComplete: null };
       return next;
     });
   }
@@ -411,7 +388,7 @@ export function WorkoutLogForm({
       ...current,
       [exercise.exerciseId]: {
         ...current[exercise.exerciseId],
-        sets: [...current[exercise.exerciseId].sets, createEmptySet(exercise.lastWeight)],
+        sets: [...current[exercise.exerciseId].sets, createEmptySet()],
       },
     }));
   }
@@ -439,8 +416,10 @@ export function WorkoutLogForm({
     setStatus(null);
     setExerciseState((current) => {
       const exercise = current[exerciseId];
-      const autoComplete = exercise.sets.length > 0 && exercise.sets.every((set) => hasLoggedReps(set));
-      const currentComplete = exercise.manualComplete ?? autoComplete;
+      const currentComplete = deriveExerciseComplete({
+        sets: exercise.sets,
+        manualComplete: exercise.manualComplete,
+      });
 
       return {
         ...current,
@@ -457,8 +436,8 @@ export function WorkoutLogForm({
     setExerciseState((current) => ({
       ...current,
       [exercise.exerciseId]: {
-        sets: Array.from({ length: current[exercise.exerciseId].sets.length }, () => createEmptySet(null)),
-        manualComplete: false,
+        sets: Array.from({ length: current[exercise.exerciseId].sets.length }, () => createEmptySet()),
+        manualComplete: null,
       },
     }));
     setActiveRestTimer((current) => (current?.exerciseId === exercise.exerciseId ? null : current));
@@ -595,8 +574,11 @@ export function WorkoutLogForm({
                       <p className="text-xs uppercase tracking-[0.28em] text-sky-300">{exercise.type}</p>
                       <h3 className="mt-2 text-lg font-semibold text-slate-50">{exercise.name}</h3>
                       <p className="mt-2 text-sm text-slate-400">{formatPlannedScheme(exercise)}</p>
+                      <p className="mt-2 text-xs text-slate-500">
+                        Completed exercises save to history. Fill every set or tap Mark complete to save this exercise.
+                      </p>
                       {exercise.lastEntrySets?.length ? (
-                        <p className="mt-2 text-xs text-slate-500">Prefilled from your last logged set data.</p>
+                        <p className="mt-1 text-xs text-slate-500">Use Last time as a reference; today's inputs start blank.</p>
                       ) : null}
                     </div>
                     <div className="flex flex-wrap items-center justify-end gap-2">
@@ -640,12 +622,23 @@ export function WorkoutLogForm({
                         >
                           ✓
                         </span>
-                        {complete ? "Completed" : "Mark complete"}
+                        {complete ? "Completed · will save" : "Mark complete to save"}
                       </button>
                     </div>
                   </div>
 
                   <ExerciseDiagramToggle imageUrls={exercise.imageUrls} />
+
+                  {exercise.lastEntrySets?.length ? (
+                    <div className="rounded-2xl border border-sky-300/15 bg-sky-400/5 p-3">
+                      <p className="text-xs uppercase tracking-[0.22em] text-sky-200">Last time</p>
+                      <div className="mt-2 grid gap-1 text-xs text-slate-300">
+                        {exercise.lastEntrySets.map((set, index) => (
+                          <p key={index}>{formatLastTimeSet(set, index)}</p>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
 
                   <div className="grid gap-3">
                     {state.sets.map((set, setIndex) => {

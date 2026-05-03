@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { findExistingWorkoutLog, saveWorkoutLog } from "@/lib/db";
 import { getWeekStart, formatDate } from "@/lib/date";
+import { getEntriesWithUnsavedData, hasCompletedSetData, shouldPersistWorkoutEntry } from "@/lib/workout-completion";
 import { WorkoutLog } from "@/lib/types";
 
 export type SaveWorkoutLogActionState = {
@@ -41,7 +42,9 @@ function parseExerciseEntries(params: {
     }).filter((set) => set.reps || set.weight || set.duration || set.notes);
 
     const status = String(getValue(`${exerciseId}-status`) ?? "completed") as WorkoutLog["entries"][number]["status"];
-    const completed = String(getValue(`${exerciseId}-completed`) ?? String(status === "completed")) === "true";
+    const completedFromForm = String(getValue(`${exerciseId}-completed`) ?? "false") === "true";
+    const completedFromSetData = setCount > 0 && sets.length === setCount && sets.every(hasCompletedSetData);
+    const completed = completedFromForm || (status === "completed" && completedFromSetData);
 
     return {
       exerciseId,
@@ -73,6 +76,15 @@ export async function saveWorkoutLogAction(
     getValue: (key) => formData.get(key),
   });
 
+  const entriesWithUnsavedData = getEntriesWithUnsavedData(entries);
+  if (entriesWithUnsavedData.length > 0) {
+    return {
+      status: "error",
+      message: `These exercises have logged data but are not complete: ${entriesWithUnsavedData.map((entry) => entry.name).join(", ")}. Fill every set or tap Mark complete so they save to history.`,
+      savedAt: null,
+    };
+  }
+
   const totalVolume = entries.reduce((sum, entry) => {
     return (
       sum +
@@ -91,7 +103,7 @@ export async function saveWorkoutLogAction(
     dayName,
     weekStartDate,
     planId: planId || null,
-    entries: entries.filter((entry) => entry.completed || entry.status === "skipped"),
+    entries: entries.filter(shouldPersistWorkoutEntry),
     totalVolume,
     durationMinutes: numberOrUndefined(formData.get("durationMinutes")) ?? null,
     notes: String(formData.get("sessionNotes") ?? "").trim() || null,
