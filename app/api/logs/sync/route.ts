@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { findExistingWorkoutLog, saveWorkoutLog } from "@/lib/db";
+import { getEntriesWithUnsavedData, hasCompletedSetData, shouldPersistWorkoutEntry } from "@/lib/workout-completion";
 import { WorkoutLog } from "@/lib/types";
 
 function valueAt<T>(value: unknown, index: number) {
@@ -38,15 +39,31 @@ export async function POST(request: NextRequest) {
         };
       }).filter((set) => set.reps || set.weight || set.duration || set.notes);
 
+      const status = String(valueAt(item[`${exerciseId}-status`], 0) ?? "completed") as WorkoutLog["entries"][number]["status"];
+      const completedFromPayload = String(valueAt(item[`${exerciseId}-completed`], 0) ?? "false") === "true";
+      const completedFromSetData = setCount > 0 && sets.length === setCount && sets.every(hasCompletedSetData);
+      const completed = completedFromPayload || (status === "completed" && completedFromSetData);
+
       return {
         exerciseId,
         name: exerciseNames[index],
         type: exerciseTypes[index] as WorkoutLog["entries"][number]["type"],
-        completed: String(valueAt(item[`${exerciseId}-completed`], 0) ?? "false") === "true",
+        completed,
+        status,
         actualSetCount: setCount,
         sets,
       };
     });
+
+    const entriesWithUnsavedData = getEntriesWithUnsavedData(entries);
+    if (entriesWithUnsavedData.length > 0) {
+      return NextResponse.json(
+        {
+          error: `These exercises have logged data but are not complete: ${entriesWithUnsavedData.map((entry) => entry.name).join(", ")}. Fill every set or tap Mark complete so they save to history.`,
+        },
+        { status: 400 },
+      );
+    }
 
     const totalVolume = entries.reduce((sum, entry) => {
       return (
@@ -80,7 +97,7 @@ export async function POST(request: NextRequest) {
       dayName,
       weekStartDate: String(item.weekStartDate),
       planId,
-      entries: entries.filter((entry) => entry.completed),
+      entries: entries.filter(shouldPersistWorkoutEntry),
       totalVolume,
       durationMinutes: item.durationMinutes ? Number(item.durationMinutes) : null,
       notes: item.sessionNotes ? String(item.sessionNotes) : null,
