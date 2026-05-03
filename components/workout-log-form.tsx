@@ -27,7 +27,6 @@ type WorkoutLogFormExercise = {
   diagrams: string[];
   imageUrls?: [string, string] | null;
   equipment: string[];
-  lastWeight: number | null;
   lastEntrySets?: LoggedSet[] | null;
   plannedSets: number;
   plannedReps: string;

@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 import { SectionHeader } from "@/components/section-header";
 import { WorkoutLogForm } from "@/components/workout-log-form";
-import { getExerciseById, getLastExerciseEntry, getLastWeightForExercise, listExercises } from "@/lib/db";
+import { getExerciseById, getLastExerciseEntry, listExercises } from "@/lib/db";
 import { formatDate } from "@/lib/date";
 import { getOrCreateCurrentPlan } from "@/lib/plans";
 import { saveWorkoutLogAction } from "@/app/log/actions";
@@ -18,7 +18,6 @@ type DetailedExercise = {
     category: Exercise["category"];
   };
   exercise: Exercise;
-  lastWeight: number | null;
   lastEntrySets: LoggedSet[] | null;
 };
 
@@ -38,7 +37,6 @@ export default function LogPage({
         ? {
             planExercise: item,
             exercise,
-            lastWeight: exercise.type === "strength" ? getLastWeightForExercise(exercise.id) : null,
             lastEntrySets: getLastExerciseEntry(exercise.id)?.sets ?? null,
           }
         : null;
@@ -54,7 +52,7 @@ export default function LogPage({
       <SectionHeader
         eyebrow="Session Capture"
         title="Log"
-        description="Quick-log the scheduled session, with last used strength weights prefilled when available."
+        description="Quick-log the scheduled session while keeping prior workout data read-only under Last time."
       />
       <section className="glass-panel rounded-3xl p-4">
         <div className="flex flex-wrap gap-2">
@@ -91,7 +89,6 @@ export default function LogPage({
             diagrams: item.exercise.diagrams,
             imageUrls: item.exercise.imageUrls,
             equipment: item.exercise.equipment,
-            lastWeight: item.lastWeight,
             lastEntrySets: item.lastEntrySets,
             plannedSets: item.planExercise.sets,
             plannedReps: item.planExercise.reps,

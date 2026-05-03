@@ -309,21 +309,6 @@ export function getWorkoutLogs(limit = 30): WorkoutLog[] {
   }));
 }
 
-export function getLastWeightForExercise(exerciseId: string) {
-  const logs = getWorkoutLogs(100);
-
-  for (const log of logs) {
-    const entry = log.entries.find((item) => item.exerciseId === exerciseId);
-    const lastWeightedSet = entry?.sets.find((set) => typeof set.weight === "number");
-
-    if (lastWeightedSet?.weight) {
-      return lastWeightedSet.weight;
-    }
-  }
-
-  return null;
-}
-
 export function getLastExerciseEntry(exerciseId: string) {
   const logs = getWorkoutLogs(100);
 
