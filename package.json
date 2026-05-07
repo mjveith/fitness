@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3102",
+    "dev:sandbox": "FITNESS_DATA_DIR=./dev-data next dev -p 3112",
     "build": "next build",
     "start": "next start -p 3102",
     "lint": "next lint",

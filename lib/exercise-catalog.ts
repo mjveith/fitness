@@ -235,16 +235,17 @@ const catalogBlueprints: Blueprint[] = [
   }),
   ...createBlueprints("core", "bodyweight", "crunch", [
     ["Crunch", ["mat"]],
+    ["Ab Wheel Rollout", ["ab wheel", "mat"]],
     ["Reverse Crunch", ["mat"]],
     ["V-Up", ["mat"]],
     ["Hollow Body Rock", ["mat"]],
   ], {
     primary: ["abs"],
     secondary: ["hip flexors"],
-    description: "Curl the rib cage toward the pelvis without yanking on the neck.",
+    description: "Flex or brace the anterior core while keeping the ribs stacked over the pelvis.",
     cues: ["Exhale into the contraction.", "Keep the low back controlled.", "Avoid using momentum."],
     defaultSets: 3,
-    defaultReps: "12-20",
+    defaultReps: "8-15",
     defaultRestSeconds: 45,
   }),
   ...createBlueprints("core", "bodyweight", "rotation", [

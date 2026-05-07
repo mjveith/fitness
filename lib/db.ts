@@ -5,7 +5,7 @@ import { exerciseCatalog } from "@/lib/exercise-catalog";
 import { getExerciseImageUrls } from "@/lib/exercise-image-map";
 import { Exercise, SplitType, WorkoutLog, WorkoutPlan } from "@/lib/types";
 
-const dataDir = path.join(process.cwd(), "data");
+const dataDir = path.join(process.env.FITNESS_DATA_DIR ?? process.cwd(), "data");
 const dbPath = path.join(dataDir, "fitness.db");
 
 declare global {
