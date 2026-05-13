@@ -39,6 +39,7 @@ function initDb(db: Database.Database) {
       split TEXT NOT NULL,
       workout_days INTEGER NOT NULL DEFAULT 5,
       exercises_per_workout INTEGER NOT NULL DEFAULT 5,
+      athletic_work_json TEXT,
       days_json TEXT NOT NULL,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
@@ -73,6 +74,10 @@ function initDb(db: Database.Database) {
 
   if (!workoutPlanColumnNames.has("exercises_per_workout")) {
     db.exec("ALTER TABLE workout_plans ADD COLUMN exercises_per_workout INTEGER NOT NULL DEFAULT 5");
+  }
+
+  if (!workoutPlanColumnNames.has("athletic_work_json")) {
+    db.exec("ALTER TABLE workout_plans ADD COLUMN athletic_work_json TEXT");
   }
 
   const upsertExercise = db.prepare(`
@@ -192,13 +197,14 @@ export function getExerciseById(id: string) {
 export function upsertWorkoutPlan(plan: WorkoutPlan) {
   const db = getDb();
   db.prepare(`
-    INSERT INTO workout_plans (id, week_start_date, split, workout_days, exercises_per_workout, days_json)
-    VALUES (@id, @weekStartDate, @split, @workoutDays, @exercisesPerWorkout, @daysJson)
+    INSERT INTO workout_plans (id, week_start_date, split, workout_days, exercises_per_workout, athletic_work_json, days_json)
+    VALUES (@id, @weekStartDate, @split, @workoutDays, @exercisesPerWorkout, @athleticWorkJson, @daysJson)
     ON CONFLICT(week_start_date) DO UPDATE SET
       id = excluded.id,
       split = excluded.split,
       workout_days = excluded.workout_days,
       exercises_per_workout = excluded.exercises_per_workout,
+      athletic_work_json = excluded.athletic_work_json,
       days_json = excluded.days_json
   `).run({
     id: plan.id,
@@ -206,6 +212,7 @@ export function upsertWorkoutPlan(plan: WorkoutPlan) {
     split: plan.split,
     workoutDays: plan.workoutDays,
     exercisesPerWorkout: plan.exercisesPerWorkout,
+    athleticWorkJson: plan.athleticWork ? JSON.stringify(plan.athleticWork) : null,
     daysJson: JSON.stringify(plan.days),
   });
 }
@@ -226,6 +233,7 @@ export function getWorkoutPlanByWeek(weekStartDate: string): WorkoutPlan | null 
     split: row.split as SplitType,
     workoutDays: Number(row.workout_days) || 5,
     exercisesPerWorkout: Number(row.exercises_per_workout) || 5,
+    athleticWork: row.athletic_work_json ? JSON.parse(String(row.athletic_work_json)) : undefined,
     days: JSON.parse(String(row.days_json)),
   };
 }

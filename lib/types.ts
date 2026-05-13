@@ -12,6 +12,19 @@ export type ExerciseType = "strength" | "bodyweight" | "cardio" | "plyo";
 
 export type SplitType = "ppl" | "upper-lower" | "full-body";
 
+export type AthleticModality = "sprints" | "jumps" | "agility" | "conditioning";
+export type AthleticIntensity = "low" | "moderate" | "high";
+export type AthleticPlacementMode = "auto" | "preferred" | "locked";
+export type ExerciseMediaKind = "image-pair" | "diagram" | "description";
+
+export type AthleticWorkConfig = {
+  frequency: number;
+  intensity: AthleticIntensity;
+  modalities: AthleticModality[];
+  placementMode: AthleticPlacementMode;
+  preferredDays: number[];
+};
+
 export type Exercise = {
   id: string;
   name: string;
@@ -36,6 +49,17 @@ export type PlanExercise = {
   reps: string;
   restSeconds: number;
   category: ExerciseCategory;
+  modality?: AthleticModality;
+  mediaKind?: ExerciseMediaKind;
+  prescription?: {
+    distanceOrTime: string;
+    reps: string;
+    sets: string;
+    rest: string;
+    intensity: string;
+    notes: string;
+  };
+  safetyNotes?: string;
 };
 
 export type WorkoutPlanDay = {
@@ -53,6 +77,7 @@ export type WorkoutPlan = {
   split: SplitType;
   workoutDays: number;
   exercisesPerWorkout: number;
+  athleticWork?: AthleticWorkConfig;
   days: WorkoutPlanDay[];
 };
 

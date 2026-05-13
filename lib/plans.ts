@@ -1,8 +1,8 @@
 import { getWeekStart, addDays, formatDate } from "@/lib/date";
 import { getWorkoutPlanByWeek, listExercises, upsertWorkoutPlan } from "@/lib/db";
-import { Exercise, SplitType, WorkoutPlan, WorkoutPlanDay } from "@/lib/types";
+import { AthleticIntensity, AthleticModality, AthleticPlacementMode, AthleticWorkConfig, Exercise, PlanExercise, SplitType, WorkoutPlan, WorkoutPlanDay } from "@/lib/types";
 
-const labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const dayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const defaultWorkoutDays = 5;
 const defaultExercisesPerWorkout = 5;
 const minWorkoutDays = 1;
@@ -24,6 +24,7 @@ type PlanConfig = {
   split: SplitType;
   workoutDays: number;
   exercisesPerWorkout: number;
+  athleticWork?: Partial<AthleticWorkConfig>;
 };
 
 type DayTemplate = {
@@ -33,7 +34,131 @@ type DayTemplate = {
   exercises: Exercise[];
 };
 
+type AthleticTemplate = {
+  id: string;
+  name: string;
+  modality: AthleticModality;
+  mediaKind: "image-pair" | "diagram" | "description";
+  prescription: PlanExercise["prescription"];
+  safetyNotes: string;
+};
+
 const coreFocusSuffix = "Intentional core work for trunk strength and control";
+const defaultAthleticWork: AthleticWorkConfig = {
+  frequency: 0,
+  intensity: "moderate",
+  modalities: ["sprints", "jumps", "agility"],
+  placementMode: "auto",
+  preferredDays: [],
+};
+
+const athleticTemplates: AthleticTemplate[] = [
+  {
+    id: "flying-20s",
+    name: "Flying 20m Sprints",
+    modality: "sprints",
+    mediaKind: "description",
+    prescription: {
+      distanceOrTime: "20m fly zone after 20m buildup",
+      reps: "4-6 reps",
+      sets: "1 sprint series",
+      rest: "2-3 min walk-back rest",
+      intensity: "Fast but crisp: 85-95% effort",
+      notes: "Stop if sprint mechanics degrade; keep every rep smooth.",
+    },
+    safetyNotes: "Warm up thoroughly with skips, buildups, and hamstring prep before sprinting.",
+  },
+  {
+    id: "hill-sprint-repeats",
+    name: "Hill Sprint Repeats",
+    modality: "sprints",
+    mediaKind: "description",
+    prescription: {
+      distanceOrTime: "8-12 sec uphill sprint",
+      reps: "6-8 reps",
+      sets: "1 sprint series",
+      rest: "90-150 sec walk-down rest",
+      intensity: "Powerful acceleration, 85-90% effort",
+      notes: "Use a moderate grade and stay tall through the hips.",
+    },
+    safetyNotes: "Avoid max-speed work when calves, Achilles, or hamstrings feel irritated.",
+  },
+  {
+    id: "box-jump-power",
+    name: "Box Jump Power Sets",
+    modality: "jumps",
+    mediaKind: "image-pair",
+    prescription: {
+      distanceOrTime: "Controlled jump to stable box",
+      reps: "3-5 reps",
+      sets: "4 sets",
+      rest: "90 sec between sets",
+      intensity: "Explosive but submaximal; stick each landing",
+      notes: "Step down instead of jumping down to manage joint stress.",
+    },
+    safetyNotes: "Choose a box height you can land on quietly without tucking excessively.",
+  },
+  {
+    id: "broad-jump-sticks",
+    name: "Broad Jump + Stick Landings",
+    modality: "jumps",
+    mediaKind: "image-pair",
+    prescription: {
+      distanceOrTime: "Horizontal jump with 2-sec landing stick",
+      reps: "3 reps",
+      sets: "5 sets",
+      rest: "60-90 sec between sets",
+      intensity: "Explosive takeoff, controlled landing",
+      notes: "Reset fully between reps; quality beats fatigue.",
+    },
+    safetyNotes: "Land with knees tracking over toes and stop before landings get loud.",
+  },
+  {
+    id: "ladder-in-in-out-out",
+    name: "Ladder In-In-Out-Out Pattern",
+    modality: "agility",
+    mediaKind: "diagram",
+    prescription: {
+      distanceOrTime: "10-15 yd ladder pattern",
+      reps: "3 passes each direction",
+      sets: "2 rounds",
+      rest: "45-60 sec between passes",
+      intensity: "Quick feet at 70-85%; no tripping tempo",
+      notes: "Diagram cue: two feet in each box, then two feet outside before advancing.",
+    },
+    safetyNotes: "Keep contacts light and reduce speed if foot placement gets sloppy.",
+  },
+  {
+    id: "lateral-shuffle-deceleration",
+    name: "Lateral Shuffle + Deceleration",
+    modality: "agility",
+    mediaKind: "diagram",
+    prescription: {
+      distanceOrTime: "5-10-5 yd shuttle lane",
+      reps: "4 reps per side",
+      sets: "2 sets",
+      rest: "60-90 sec between reps",
+      intensity: "Moderate-fast with clean braking",
+      notes: "Plant outside foot, sink hips, and own the stop before reversing.",
+    },
+    safetyNotes: "Prioritize knee alignment and controlled cuts over speed.",
+  },
+  {
+    id: "tempo-carry-conditioning",
+    name: "Tempo Carry Conditioning",
+    modality: "conditioning",
+    mediaKind: "description",
+    prescription: {
+      distanceOrTime: "30-40 yd loaded carry",
+      reps: "4-6 carries",
+      sets: "1 conditioning block",
+      rest: "60 sec between carries",
+      intensity: "RPE 7: challenging but posture stays clean",
+      notes: "Brace ribs down and walk with even steps.",
+    },
+    safetyNotes: "Use a load you can carry without leaning or losing grip position.",
+  },
+];
 
 function chooseExercises(exercises: Exercise[], category: Exercise["category"], count: number, cursor: number) {
   const matching = exercises.filter((exercise) => exercise.category === category);
@@ -118,6 +243,107 @@ function takeCycled<T>(items: T[], count: number, cursor = 0) {
   return Array.from({ length: count }, (_, index) => items[(cursor + index) % items.length]);
 }
 
+function normalizeAthleticWork(config?: Partial<AthleticWorkConfig>): AthleticWorkConfig {
+  const validModalities = new Set<AthleticModality>(["sprints", "jumps", "agility", "conditioning"]);
+  const validIntensities = new Set<AthleticIntensity>(["low", "moderate", "high"]);
+  const validPlacementModes = new Set<AthleticPlacementMode>(["auto", "preferred", "locked"]);
+  const modalities = (config?.modalities ?? defaultAthleticWork.modalities)
+    .filter((modality): modality is AthleticModality => validModalities.has(modality));
+
+  return {
+    frequency: clamp(Number(config?.frequency ?? defaultAthleticWork.frequency) || 0, 0, 4),
+    intensity: validIntensities.has(config?.intensity as AthleticIntensity) ? config?.intensity as AthleticIntensity : defaultAthleticWork.intensity,
+    modalities: modalities.length ? modalities : defaultAthleticWork.modalities,
+    placementMode: validPlacementModes.has(config?.placementMode as AthleticPlacementMode) ? config?.placementMode as AthleticPlacementMode : defaultAthleticWork.placementMode,
+    preferredDays: Array.from(new Set((config?.preferredDays ?? [])
+      .map((day) => Number(day))
+      .filter((day) => Number.isInteger(day) && day >= 0 && day <= 6))),
+  };
+}
+
+function athleticTemplateToExercise(template: AthleticTemplate, intensity: AthleticIntensity, index: number): PlanExercise {
+  const intensityLabel = intensity === "high" ? template.prescription?.intensity ?? "High intensity" :
+    intensity === "low" ? "Technique pace: 65-75% effort" : template.prescription?.intensity ?? "Moderate intensity";
+
+  return {
+    exerciseId: `athletic-${template.id}`,
+    name: template.name,
+    type: template.modality === "sprints" || template.modality === "conditioning" ? "cardio" : "plyo",
+    sets: Number.parseInt(template.prescription?.sets ?? "1", 10) || 1,
+    reps: `${template.prescription?.reps ?? "quality reps"} · ${template.prescription?.distanceOrTime ?? "field work"}`,
+    restSeconds: intensity === "high" ? 150 : intensity === "low" ? 60 : 90,
+    category: template.modality === "sprints" || template.modality === "conditioning" ? "cardio" : "plyo",
+    modality: template.modality,
+    mediaKind: template.mediaKind,
+    prescription: template.prescription ? { ...template.prescription, intensity: intensityLabel } : undefined,
+    safetyNotes: `${template.safetyNotes} Progression: add volume only after two clean sessions at this intensity. Block ${index + 1}.`,
+  };
+}
+
+function chooseAthleticTemplatesForSession(config: AthleticWorkConfig, sessionIndex: number) {
+  return config.modalities.map((modality) => {
+    const matching = athleticTemplates.filter((template) => template.modality === modality);
+    return takeCycled(matching.length ? matching : athleticTemplates, 1, sessionIndex + (config.intensity === "high" ? 1 : 0))[0];
+  }).filter(Boolean);
+}
+
+function calendarDayToPlanIndex(days: WorkoutPlanDay[], calendarDay: number) {
+  return days.findIndex((day) => new Date(`${day.date}T00:00:00`).getDay() === calendarDay);
+}
+
+function candidateAthleticIndexes(days: WorkoutPlanDay[], config: AthleticWorkConfig) {
+  const preferred = config.preferredDays
+    .map((calendarDay) => calendarDayToPlanIndex(days, calendarDay))
+    .filter((day) => day >= 0 && day < days.length);
+
+  if (config.placementMode === "locked" && preferred.length > 0) {
+    return preferred;
+  }
+
+  const restIndexes = days
+    .map((day, index) => ({ day, index }))
+    .filter(({ day }) => day.exercises.length === 0)
+    .map(({ index }) => index);
+  const nonLegIndexes = days
+    .map((day, index) => ({ day, index }))
+    .filter(({ day }) => day.exercises.length > 0 && !/leg|lower/i.test(day.workoutType))
+    .map(({ index }) => index);
+
+  return [...preferred, ...restIndexes, ...nonLegIndexes, ...days.map((_, index) => index)]
+    .filter((day, index, all) => all.indexOf(day) === index);
+}
+
+function applyAthleticWork(days: WorkoutPlanDay[], config: AthleticWorkConfig) {
+  if (config.frequency <= 0) {
+    return days;
+  }
+
+  const indexes = candidateAthleticIndexes(days, config).slice(0, config.frequency);
+
+  return days.map((day, index) => {
+    const placement = indexes.indexOf(index);
+
+    if (placement === -1) {
+      return day;
+    }
+
+    const athleticExercises = chooseAthleticTemplatesForSession(config, placement)
+      .map((template, exerciseIndex) => athleticTemplateToExercise(template, config.intensity, placement + exerciseIndex));
+    const isStandalone = day.exercises.length === 0;
+    const modalitySummary = athleticExercises.map((exercise) => exercise.modality).filter(Boolean).join(" + ");
+    const firstPrescription = athleticExercises[0]?.prescription;
+
+    return {
+      ...day,
+      workoutType: isStandalone ? "Athletic Conditioning" : `${day.workoutType} + Athletic`,
+      focus: isStandalone
+        ? `Athletic work (${modalitySummary}) layered by ${config.placementMode} placement.`
+        : `${day.focus}. Athletic finisher (${modalitySummary}): ${firstPrescription?.distanceOrTime}; ${firstPrescription?.rest} rest.`,
+      exercises: isStandalone ? athleticExercises : [...day.exercises, ...athleticExercises],
+    };
+  });
+}
+
 function buildDay(
   index: number,
   date: string,
@@ -128,7 +354,7 @@ function buildDay(
   return {
     dayOfWeek: index,
     date,
-    label: labels[index],
+    label: dayLabels[new Date(`${date}T00:00:00`).getDay()],
     workoutType,
     focus,
     exercises: selections.map((exercise) => ({
@@ -294,7 +520,7 @@ function buildWorkoutSequence(
 
 function generateDays(config: PlanConfig, weekStartDate: string): WorkoutPlanDay[] {
   const exercises = listExercises();
-  const monday = new Date(`${weekStartDate}T00:00:00`);
+  const startDate = new Date(`${weekStartDate}T00:00:00`);
   const exercisesPerWorkout = clamp(config.exercisesPerWorkout, minExercisesPerWorkout, maxExercisesPerWorkout);
   const workoutDays = clamp(config.workoutDays, minWorkoutDays, maxWorkoutDays);
 
@@ -384,9 +610,11 @@ function generateDays(config: PlanConfig, weekStartDate: string): WorkoutPlanDay
     createTemplate("Rest / Recovery", "Walk, mobility, and easy recovery work", [], [], exercisesPerWorkout),
   );
 
-  return [...workoutSequence, ...restDays].map((template, index) =>
-    buildDay(index, formatDate(addDays(monday, index)), template.workoutType, template.focus, template.exercises),
+  const strengthDays = [...workoutSequence, ...restDays].map((template, index) =>
+    buildDay(index, formatDate(addDays(startDate, index)), template.workoutType, template.focus, template.exercises),
   );
+
+  return applyAthleticWork(strengthDays, normalizeAthleticWork(config.athleticWork));
 }
 
 export function getOrCreateCurrentPlan(split: SplitType = "ppl") {
@@ -411,17 +639,23 @@ export function createWorkoutPlan(config: PlanConfig, weekStartDate = formatDate
     minExercisesPerWorkout,
     maxExercisesPerWorkout,
   );
+  const athleticWork = normalizeAthleticWork(config.athleticWork);
+  const athleticId = athleticWork.frequency > 0
+    ? `-athletic-${athleticWork.frequency}-${athleticWork.intensity}-${athleticWork.placementMode}-${athleticWork.modalities.join("_")}-${athleticWork.preferredDays.join("_")}`
+    : "";
   const plan: WorkoutPlan = {
-    id: `plan-${weekStartDate}-${config.split}-${workoutDays}-${exercisesPerWorkout}`,
+    id: `plan-${weekStartDate}-${config.split}-${workoutDays}-${exercisesPerWorkout}${athleticId}`,
     weekStartDate,
     split: config.split,
     workoutDays,
     exercisesPerWorkout,
+    athleticWork,
     days: generateDays(
       {
         split: config.split,
         workoutDays,
         exercisesPerWorkout,
+        athleticWork,
       },
       weekStartDate,
     ),

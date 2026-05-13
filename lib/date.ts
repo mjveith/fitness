@@ -2,12 +2,29 @@ export function formatDate(date: Date) {
   return date.toISOString().slice(0, 10);
 }
 
-export function getWeekStart(input = new Date()) {
+export type WeekStartDay = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+
+export const weekStartDayOptions: Array<{ value: WeekStartDay; label: string }> = [
+  { value: 1, label: "Monday" },
+  { value: 2, label: "Tuesday" },
+  { value: 3, label: "Wednesday" },
+  { value: 4, label: "Thursday" },
+  { value: 5, label: "Friday" },
+  { value: 6, label: "Saturday" },
+  { value: 0, label: "Sunday" },
+];
+
+export function normalizeWeekStartDay(value: unknown): WeekStartDay {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= 0 && parsed <= 6 ? (parsed as WeekStartDay) : 1;
+}
+
+export function getWeekStart(input = new Date(), weekStartsOn: WeekStartDay = 1) {
   const date = new Date(input);
   const day = date.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
+  const diff = (day - weekStartsOn + 7) % 7;
   date.setHours(0, 0, 0, 0);
-  date.setDate(date.getDate() + diff);
+  date.setDate(date.getDate() - diff);
   return date;
 }
 
