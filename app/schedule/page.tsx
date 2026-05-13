@@ -28,9 +28,9 @@ export default function SchedulePage({ searchParams }: SchedulePageProps) {
   };
   const modalityOptions = [
     { value: "sprints", label: "Sprints" },
-    { value: "jumps", label: "Jumps / plyos" },
-    { value: "agility", label: "Ladder / agility" },
-    { value: "conditioning", label: "Athletic conditioning" },
+    { value: "jumps", label: "Plyos" },
+    { value: "agility", label: "Agility" },
+    { value: "conditioning", label: "Conditioning" },
   ];
 
   return (
@@ -97,7 +97,7 @@ export default function SchedulePage({ searchParams }: SchedulePageProps) {
             <div>
               <p className="text-xs uppercase tracking-[0.28em] text-sky-200">Athletic work</p>
             </div>
-            <div className="mt-4 grid gap-3 md:grid-cols-3">
+            <div className="mt-4 grid min-w-0 gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.25fr)]">
               <label className="grid gap-2 text-sm text-slate-300">
                 Frequency / week
                 <input
@@ -106,7 +106,7 @@ export default function SchedulePage({ searchParams }: SchedulePageProps) {
                   min={0}
                   max={4}
                   defaultValue={athleticWork.frequency}
-                  className="rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-slate-100 outline-none"
+                  className="w-full min-w-0 rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-slate-100 outline-none"
                 />
               </label>
               <label className="grid gap-2 text-sm text-slate-300">
@@ -114,7 +114,7 @@ export default function SchedulePage({ searchParams }: SchedulePageProps) {
                 <select
                   name="athleticIntensity"
                   defaultValue={athleticWork.intensity}
-                  className="rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-slate-100 outline-none"
+                  className="w-full min-w-0 rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-slate-100 outline-none"
                 >
                   <option value="low">Low / technique</option>
                   <option value="moderate">Moderate</option>
@@ -126,7 +126,7 @@ export default function SchedulePage({ searchParams }: SchedulePageProps) {
                 <select
                   name="athleticPlacementMode"
                   defaultValue={athleticWork.placementMode}
-                  className="rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-slate-100 outline-none"
+                  className="w-full min-w-0 rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-slate-100 outline-none"
                 >
                   <option value="auto">Generate around recovery</option>
                   <option value="preferred">Prefer selected days</option>
@@ -135,7 +135,7 @@ export default function SchedulePage({ searchParams }: SchedulePageProps) {
               </label>
               <fieldset className="grid gap-2 text-sm text-slate-300 md:col-span-3">
                 <legend className="text-sm">Modalities</legend>
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                   {modalityOptions.map((option) => (
                     <label key={option.value} className="flex min-w-0 items-center gap-2 rounded-2xl border border-white/10 bg-slate-950 px-3 py-2 text-xs leading-snug">
                       <input
@@ -152,9 +152,9 @@ export default function SchedulePage({ searchParams }: SchedulePageProps) {
               </fieldset>
               <fieldset className="grid gap-2 text-sm text-slate-300 md:col-span-3">
                 <legend className="text-sm">Preferred / locked days</legend>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+                <div className="grid grid-cols-7 gap-1">
                   {dayLabelsForForm.map((label, index) => (
-                    <label key={label} className="flex min-w-0 items-center gap-2 rounded-2xl border border-white/10 bg-slate-950 px-3 py-2 text-xs leading-snug">
+                    <label key={label} className="flex min-w-0 items-center justify-center gap-1 rounded-2xl border border-white/10 bg-slate-950 px-1.5 py-2 text-[11px] leading-none">
                       <input
                         type="checkbox"
                         name="athleticPreferredDays"
