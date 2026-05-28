@@ -1,9 +1,10 @@
 export const dynamic = "force-dynamic";
+import { cookies } from "next/headers";
 import { SectionHeader } from "@/components/section-header";
 import { WorkoutLogForm } from "@/components/workout-log-form";
 import { getExerciseById, getLastExerciseEntry, listExercises } from "@/lib/db";
 import { formatDate } from "@/lib/date";
-import { getOrCreateCurrentPlan } from "@/lib/plans";
+import { getWorkoutPlanForDate } from "@/lib/plans";
 import { saveWorkoutLogAction } from "@/app/log/actions";
 import { Exercise, LoggedSet } from "@/lib/types";
 
@@ -24,11 +25,12 @@ type DetailedExercise = {
 export default function LogPage({
   searchParams,
 }: {
-  searchParams: { date?: string; actualDate?: string };
+  searchParams: { date?: string; actualDate?: string; weekStartDate?: string };
 }) {
-  const plan = getOrCreateCurrentPlan();
   const selectedDate = searchParams.date ?? formatDate(new Date());
-  const actualDate = searchParams.actualDate ?? formatDate(new Date());
+  const activeWeekStartDate = searchParams.weekStartDate ?? cookies().get("fitness-active-week-start")?.value ?? null;
+  const plan = getWorkoutPlanForDate(selectedDate, activeWeekStartDate);
+  const actualDate = searchParams.actualDate ?? selectedDate;
   const selectedDay = plan.days.find((day) => day.date === selectedDate) ?? plan.days[0];
   const detailedExercises = selectedDay.exercises
     .map((item) => {
@@ -59,7 +61,7 @@ export default function LogPage({
           {plan.days.map((day) => (
             <a
               key={day.date}
-              href={`/log?date=${day.date}&actualDate=${actualDate}`}
+              href={`/log?weekStartDate=${encodeURIComponent(plan.weekStartDate)}&date=${encodeURIComponent(day.date)}&actualDate=${encodeURIComponent(actualDate)}`}
               className={`rounded-full px-3 py-2 text-xs ${
                 day.date === selectedDay.date
                   ? "bg-sky-400 text-slate-950"

@@ -1,4 +1,4 @@
-import { getWeekStart, addDays, formatDate } from "@/lib/date";
+import { getWeekStart, addDays, formatDate, WeekStartDay } from "@/lib/date";
 import { getWorkoutPlanByWeek, listExercises, upsertWorkoutPlan } from "@/lib/db";
 import { AthleticIntensity, AthleticModality, AthleticPlacementMode, AthleticWorkConfig, Exercise, PlanExercise, SplitType, WorkoutPlan, WorkoutPlanDay } from "@/lib/types";
 
@@ -630,6 +630,32 @@ export function getOrCreateCurrentPlan(split: SplitType = "ppl") {
     workoutDays: defaultWorkoutDays,
     exercisesPerWorkout: defaultExercisesPerWorkout,
   }, weekStartDate);
+}
+
+function planContainsDate(plan: WorkoutPlan, date: string) {
+  return plan.days.some((day) => day.date === date);
+}
+
+export function getWorkoutPlanForDate(date: string, preferredWeekStartDate?: string | null, split: SplitType = "ppl") {
+  if (preferredWeekStartDate) {
+    const preferredPlan = getWorkoutPlanByWeek(preferredWeekStartDate);
+    if (preferredPlan && planContainsDate(preferredPlan, date)) {
+      return preferredPlan;
+    }
+  }
+
+  const selectedDate = new Date(`${date}T00:00:00`);
+  if (!Number.isNaN(selectedDate.getTime())) {
+    for (const weekStartsOn of [0, 1, 2, 3, 4, 5, 6] as WeekStartDay[]) {
+      const candidateWeekStartDate = formatDate(getWeekStart(selectedDate, weekStartsOn));
+      const candidatePlan = getWorkoutPlanByWeek(candidateWeekStartDate);
+      if (candidatePlan && planContainsDate(candidatePlan, date)) {
+        return candidatePlan;
+      }
+    }
+  }
+
+  return getOrCreateCurrentPlan(split);
 }
 
 export function createWorkoutPlan(config: PlanConfig, weekStartDate = formatDate(getWeekStart())) {
