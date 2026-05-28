@@ -44,7 +44,8 @@ for (const extension of ['.ts', '.tsx']) {
 }
 
 const { formatDate, getWeekStart } = require(path.join(projectRoot, 'lib/date.ts'));
-const { createWorkoutPlan } = require(path.join(projectRoot, 'lib/plans.ts'));
+const { createWorkoutPlan, getOrCreateCurrentPlan, getWorkoutPlanForDate } = require(path.join(projectRoot, 'lib/plans.ts'));
+const { getWorkoutPlanByWeek } = require(path.join(projectRoot, 'lib/db.ts'));
 
 function createPlan(weekStartDate) {
   return createWorkoutPlan(
@@ -79,4 +80,30 @@ test('generated Sunday-start week dates and labels align to Sunday', () => {
     plan.days.slice(0, 3).map((day) => `${day.label}:${day.date}`),
     ['Sun:2026-05-10', 'Mon:2026-05-11', 'Tue:2026-05-12']
   );
+});
+
+test('Wednesday-start generated plan persists and log resolution starts the selected Push day', () => {
+  const mondayFallbackPlan = getOrCreateCurrentPlan();
+  const generatedPlan = createPlan('2026-05-27');
+
+  assert.equal(generatedPlan.weekStartDate, '2026-05-27');
+  assert.equal(generatedPlan.days[0].date, '2026-05-27');
+  assert.equal(generatedPlan.days[0].label, 'Wed');
+  assert.equal(generatedPlan.days[0].workoutType, 'Push Strength');
+  assert.notEqual(generatedPlan.days[0].workoutType, 'Core Strength');
+
+  const persistedPlan = getWorkoutPlanByWeek('2026-05-27');
+  assert.ok(persistedPlan, 'generated Wednesday-start plan should persist');
+  assert.equal(persistedPlan.days[0].workoutType, 'Push Strength');
+
+  const resolvedFromStartLink = getWorkoutPlanForDate('2026-05-27', '2026-05-27');
+  const selectedDay = resolvedFromStartLink.days.find((day) => day.date === '2026-05-27');
+
+  assert.equal(resolvedFromStartLink.id, generatedPlan.id);
+  assert.equal(selectedDay?.workoutType, 'Push Strength');
+  assert.deepEqual(
+    selectedDay?.exercises.map((exercise) => exercise.exerciseId),
+    generatedPlan.days[0].exercises.map((exercise) => exercise.exerciseId)
+  );
+  assert.notEqual(resolvedFromStartLink.id, mondayFallbackPlan.id);
 });

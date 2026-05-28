@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { SectionHeader } from "@/components/section-header";
 import { formatDisplayDate, normalizeWeekStartDay, weekStartDayOptions } from "@/lib/date";
 import { getWorkoutPlanByWeek } from "@/lib/db";
@@ -15,7 +16,8 @@ type SchedulePageProps = {
 const dayLabelsForForm = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export default function SchedulePage({ searchParams }: SchedulePageProps) {
-  const requestedPlan = searchParams?.weekStartDate ? getWorkoutPlanByWeek(searchParams.weekStartDate) : null;
+  const activeWeekStartDate = searchParams?.weekStartDate ?? cookies().get("fitness-active-week-start")?.value ?? null;
+  const requestedPlan = activeWeekStartDate ? getWorkoutPlanByWeek(activeWeekStartDate) : null;
   const plan = requestedPlan ?? getOrCreateCurrentPlan();
   const selectedWeekStartDay = normalizeWeekStartDay(new Date(`${plan.weekStartDate}T00:00:00`).getDay());
   const selectedWeekStartLabel = weekStartDayOptions.find((option) => option.value === selectedWeekStartDay)?.label ?? "Monday";
@@ -216,7 +218,7 @@ export default function SchedulePage({ searchParams }: SchedulePageProps) {
                   </button>
                 </form>
                 <Link
-                  href={`/log?date=${day.date}`}
+                  href={`/log?weekStartDate=${encodeURIComponent(plan.weekStartDate)}&date=${encodeURIComponent(day.date)}&actualDate=${encodeURIComponent(day.date)}`}
                   className="rounded-full border border-sky-400/20 bg-sky-400/10 px-3 py-1 text-xs font-medium text-sky-200"
                 >
                   Start

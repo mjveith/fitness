@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getExerciseById, getWorkoutPlanByWeek, upsertWorkoutPlan } from "@/lib/db";
 import { formatDate, getWeekStart, normalizeWeekStartDay } from "@/lib/date";
@@ -34,6 +35,10 @@ export async function generatePlanAction(formData: FormData) {
       preferredDays: athleticPreferredDays,
     },
   }, weekStartDate);
+  cookies().set("fitness-active-week-start", weekStartDate, {
+    path: "/",
+    sameSite: "lax",
+  });
   revalidatePath("/schedule");
   revalidatePath("/log");
   revalidatePath("/progress");
@@ -50,6 +55,10 @@ export async function swapWorkoutDaysAction(formData: FormData) {
   }
 
   swapWorkoutPlanDays(weekStartDate, sourceIndex, targetIndex);
+  cookies().set("fitness-active-week-start", weekStartDate, {
+    path: "/",
+    sameSite: "lax",
+  });
   revalidatePath("/schedule");
   revalidatePath("/log");
   revalidatePath("/progress");
