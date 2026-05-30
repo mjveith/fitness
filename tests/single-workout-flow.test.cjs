@@ -37,7 +37,7 @@ for (const extension of ['.ts', '.tsx']) {
 }
 
 const { createSingleWorkout, getWorkoutHistoryGuidance, getWorkoutPlanForDate } = require(path.join(projectRoot, 'lib/plans.ts'));
-const { getWorkoutPlanByWeek, saveWorkoutLog, getWorkoutLogs } = require(path.join(projectRoot, 'lib/db.ts'));
+const { getWorkoutPlanByWeek, saveWorkoutLog, getWorkoutLogs, getExerciseById } = require(path.join(projectRoot, 'lib/db.ts'));
 
 test('single workout generator accepts only type and exercise count', () => {
   const plan = createSingleWorkout({ workoutType: 'push', exerciseCount: 4 }, '2026-05-29');
@@ -88,6 +88,23 @@ test('generated workout can be resolved for logging and saved to history', () =>
   assert.equal(logs[0].dayName, 'Core');
   assert.equal(logs[0].planId, resolved.id);
   assert.equal(logs[0].entries.length, 3);
+});
+
+test('supported workout types use unique catalog exercise ids that resolve for logging', () => {
+  const workoutTypes = ['full-body', 'push', 'pull', 'legs', 'core', 'sprints', 'athletic-conditioning'];
+
+  workoutTypes.forEach((workoutType, index) => {
+    const plan = createSingleWorkout({ workoutType, exerciseCount: 10 }, `2026-06-${String(index + 1).padStart(2, '0')}`);
+    const exerciseIds = plan.days[0].exercises.map((exercise) => exercise.exerciseId);
+
+    assert.equal(plan.days[0].exercises.length, 10, `${workoutType} should honor the requested count`);
+    assert.equal(new Set(exerciseIds).size, exerciseIds.length, `${workoutType} should not duplicate exercise ids`);
+    assert.equal(
+      exerciseIds.filter((exerciseId) => getExerciseById(exerciseId)).length,
+      exerciseIds.length,
+      `${workoutType} should only use DB-resolvable catalog ids`
+    );
+  });
 });
 
 test('history guidance avoids recent focuses and rotates core targets', () => {
