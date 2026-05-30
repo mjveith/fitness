@@ -71,6 +71,15 @@ function takeCycled<T>(items: T[], count: number, cursor = 0) {
   return Array.from({ length: count }, (_, index) => items[(cursor + index) % items.length]);
 }
 
+function takeUniqueExercises(primary: Exercise[], fallback: Exercise[], count: number) {
+  const selected = new Map<string, Exercise>();
+  for (const exercise of [...primary, ...fallback]) {
+    if (!selected.has(exercise.id)) selected.set(exercise.id, exercise);
+    if (selected.size >= count) break;
+  }
+  return Array.from(selected.values());
+}
+
 function classifyCoreExercise(exercise: Pick<Exercise, "name">): CoreFocus {
   const name = exercise.name.toLowerCase();
   if (name.includes("russian twist") || name.includes("reach-through") || name.includes("mountain climber")) return "rotation";
@@ -99,71 +108,83 @@ function buildBalancedCoreMix(exercises: Exercise[], preferredFocus: CoreFocus =
   return balanced;
 }
 
-function athleticExercise(params: {
-  id: string;
-  name: string;
-  modality: AthleticModality;
-  prescription: NonNullable<PlanExercise["prescription"]>;
-  safetyNotes: string;
-}): PlanExercise {
+function exerciseToPlanExercise(exercise: Exercise): PlanExercise {
   return {
-    exerciseId: `athletic-${params.id}`,
-    name: params.name,
-    type: params.modality === "sprints" || params.modality === "conditioning" ? "cardio" : "plyo",
-    sets: Number.parseInt(params.prescription.sets, 10) || 1,
-    reps: `${params.prescription.reps} · ${params.prescription.distanceOrTime}`,
-    restSeconds: params.modality === "sprints" ? 150 : 90,
-    category: params.modality === "sprints" || params.modality === "conditioning" ? "cardio" : "plyo",
-    modality: params.modality,
-    mediaKind: "description",
-    prescription: params.prescription,
-    safetyNotes: params.safetyNotes,
+    exerciseId: exercise.id,
+    name: exercise.name,
+    type: exercise.type,
+    sets: exercise.defaultSets,
+    reps: exercise.defaultReps,
+    restSeconds: exercise.defaultRestSeconds,
+    category: exercise.category,
   };
 }
 
-function buildAthleticTemplates(type: SingleWorkoutType): PlanExercise[] {
+function athleticCatalogExercise(
+  exercise: Exercise,
+  modality: AthleticModality,
+  prescription: NonNullable<PlanExercise["prescription"]>,
+  safetyNotes: string,
+): PlanExercise {
+  return {
+    ...exerciseToPlanExercise(exercise),
+    sets: Number.parseInt(prescription.sets, 10) || exercise.defaultSets,
+    reps: `${prescription.reps} · ${prescription.distanceOrTime}`,
+    restSeconds: Number.parseInt(prescription.rest, 10) || exercise.defaultRestSeconds,
+    modality,
+    mediaKind: "description",
+    prescription,
+    safetyNotes,
+  };
+}
+
+function takeCatalogExercises(exercises: Exercise[], ids: string[], count: number) {
+  const byId = new Map(exercises.map((exercise) => [exercise.id, exercise]));
+  const ordered = ids.map((id) => byId.get(id)).filter((exercise): exercise is Exercise => Boolean(exercise));
+  const fallback = exercises.filter((exercise) => !ids.includes(exercise.id));
+  return [...ordered, ...fallback].slice(0, count);
+}
+
+function buildAthleticSelections(type: SingleWorkoutType, count: number): PlanExercise[] {
+  const exercises = listExercises();
+
   if (type === "sprints") {
-    return [
-      athleticExercise({
-        id: "flying-20s",
-        name: "Flying 20m Sprints",
-        modality: "sprints",
-        prescription: { distanceOrTime: "20m fly zone after 20m buildup", reps: "4-6 reps", sets: "1 sprint series", rest: "2-3 min walk-back rest", intensity: "85-95% crisp effort", notes: "Stop before mechanics degrade." },
-        safetyNotes: "Warm up with skips, buildups, and hamstring prep before sprinting.",
-      }),
-      athleticExercise({
-        id: "hill-sprint-repeats",
-        name: "Hill Sprint Repeats",
-        modality: "sprints",
-        prescription: { distanceOrTime: "8-12 sec uphill sprint", reps: "6-8 reps", sets: "1 sprint series", rest: "90-150 sec walk-down rest", intensity: "Powerful but controlled", notes: "Use a moderate grade and stay tall through the hips." },
-        safetyNotes: "Avoid max-speed work when calves, Achilles, or hamstrings feel irritated.",
-      }),
-    ];
+    return takeCatalogExercises(exercises, [
+      "shuttle-run",
+      "air-bike-sprint",
+      "rowing-sprint",
+      "cycling-sprint",
+      "assault-runner-push",
+      "treadmill-run",
+      "sled-push",
+      "jump-rope",
+      "battle-rope-waves",
+      "stair-climber-push",
+    ], count).map((exercise) => athleticCatalogExercise(
+      exercise,
+      "sprints",
+      { distanceOrTime: exercise.id === "shuttle-run" ? "10-20 yd acceleration or shuttle lane" : "10-30 sec hard interval", reps: "4-8 reps", sets: "1 sprint series", rest: "90-180 sec full recovery", intensity: "Fast, crisp, stop before mechanics fade", notes: "Warm up first; keep every rep technically sharp." },
+      "Warm up with skips, buildups, and hamstring/calf prep before sprinting.",
+    ));
   }
 
-  return [
-    athleticExercise({
-      id: "box-jump-power",
-      name: "Box Jump Power Sets",
-      modality: "jumps",
-      prescription: { distanceOrTime: "Controlled jump to stable box", reps: "3-5 reps", sets: "4 sets", rest: "90 sec", intensity: "Explosive but submaximal", notes: "Step down instead of jumping down." },
-      safetyNotes: "Choose a box height you can land on quietly.",
-    }),
-    athleticExercise({
-      id: "lateral-shuffle-deceleration",
-      name: "Lateral Shuffle + Deceleration",
-      modality: "agility",
-      prescription: { distanceOrTime: "5-10-5 yd shuttle lane", reps: "4 reps per side", sets: "2 sets", rest: "60-90 sec", intensity: "Moderate-fast with clean braking", notes: "Own the stop before reversing." },
-      safetyNotes: "Prioritize knee alignment and controlled cuts over speed.",
-    }),
-    athleticExercise({
-      id: "tempo-carry-conditioning",
-      name: "Tempo Carry Conditioning",
-      modality: "conditioning",
-      prescription: { distanceOrTime: "30-40 yd loaded carry", reps: "4-6 carries", sets: "1 conditioning block", rest: "60 sec", intensity: "RPE 7", notes: "Brace ribs down and walk with even steps." },
-      safetyNotes: "Use a load you can carry without leaning or losing grip position.",
-    }),
-  ];
+  return takeCatalogExercises(exercises, [
+    "box-jump",
+    "lateral-bound",
+    "skater-hop",
+    "broad-jump",
+    "medicine-ball-slam",
+    "rotational-med-ball-throw",
+    "farmer-carry-march",
+    "shuttle-run",
+    "sled-push",
+    "battle-rope-waves",
+  ], count).map((exercise) => athleticCatalogExercise(
+    exercise,
+    exercise.category === "plyo" ? "jumps" : "conditioning",
+    { distanceOrTime: exercise.category === "plyo" ? "Explosive reps with clean landings" : "20-40 sec or 20-40 yd work bout", reps: exercise.category === "plyo" ? "3-6 reps" : "4-6 rounds", sets: exercise.category === "plyo" ? "3 sets" : "1 conditioning block", rest: exercise.category === "plyo" ? "75-120 sec" : "45-90 sec", intensity: exercise.category === "plyo" ? "Explosive but submaximal" : "RPE 7-8", notes: "Prioritize quality movement and controlled breathing." },
+    exercise.category === "plyo" ? "Land quietly and reset before each explosive rep." : "Keep posture clean; reduce pace before form breaks.",
+  ));
 }
 
 function templateFor(type: SingleWorkoutType, nextCoreFocus: CoreFocus): WorkoutTemplate {
@@ -186,24 +207,12 @@ function templateFor(type: SingleWorkoutType, nextCoreFocus: CoreFocus): Workout
   }
 }
 
-function exerciseToPlanExercise(exercise: Exercise): PlanExercise {
-  return {
-    exerciseId: exercise.id,
-    name: exercise.name,
-    type: exercise.type,
-    sets: exercise.defaultSets,
-    reps: exercise.defaultReps,
-    restSeconds: exercise.defaultRestSeconds,
-    category: exercise.category,
-  };
-}
-
 function buildExerciseSelections(type: SingleWorkoutType, count: number, nextCoreFocus: CoreFocus) {
   const exercises = listExercises();
   const template = templateFor(type, nextCoreFocus);
 
   if (type === "sprints" || type === "athletic-conditioning") {
-    return takeCycled(buildAthleticTemplates(type), count);
+    return buildAthleticSelections(type, count);
   }
 
   const coreMix = buildBalancedCoreMix(exercises, nextCoreFocus);
@@ -233,7 +242,8 @@ function buildExerciseSelections(type: SingleWorkoutType, count: number, nextCor
     "athletic-conditioning": [],
   };
 
-  return takeCycled(mixes[type], count).map(exerciseToPlanExercise);
+  const categoryFallback = exercises.filter((exercise) => template.categories.includes(exercise.category));
+  return takeUniqueExercises(mixes[type], categoryFallback, count).map(exerciseToPlanExercise);
 }
 
 function buildSingleWorkoutDay(config: Required<SingleWorkoutConfig>, date: string, nextCoreFocus: CoreFocus): WorkoutPlanDay {
