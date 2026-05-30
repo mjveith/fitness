@@ -1,4 +1,5 @@
 export const dynamic = "force-dynamic";
+import Link from "next/link";
 import { cookies } from "next/headers";
 import { SectionHeader } from "@/components/section-header";
 import { WorkoutLogForm } from "@/components/workout-log-form";
@@ -54,24 +55,17 @@ export default function LogPage({
       <SectionHeader
         eyebrow="Session Capture"
         title="Log"
-        description="Quick-log the scheduled session while keeping prior workout data read-only under Last time."
+        description="Quick-log the generated workout while keeping prior workout data read-only under Last time."
       />
-      <section className="glass-panel rounded-3xl p-4">
-        <div className="flex flex-wrap gap-2">
-          {plan.days.map((day) => (
-            <a
-              key={day.date}
-              href={`/log?weekStartDate=${encodeURIComponent(plan.weekStartDate)}&date=${encodeURIComponent(day.date)}&actualDate=${encodeURIComponent(actualDate)}`}
-              className={`rounded-full px-3 py-2 text-xs ${
-                day.date === selectedDay.date
-                  ? "bg-sky-400 text-slate-950"
-                  : "border border-white/10 bg-slate-950 text-slate-300"
-              }`}
-            >
-              {day.label}
-            </a>
-          ))}
+      <section className="glass-panel flex items-center justify-between gap-3 rounded-3xl p-4">
+        <div>
+          <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Current workout</p>
+          <p className="mt-1 text-lg font-semibold text-white">{selectedDay.workoutType}</p>
+          <p className="mt-1 text-sm text-slate-400">{selectedDay.focus}</p>
         </div>
+        <Link href="/workout" className="rounded-full border border-white/10 px-3 py-2 text-xs text-slate-200">
+          Generate new
+        </Link>
       </section>
       <section className="glass-panel rounded-3xl p-4">
         <WorkoutLogForm

@@ -1,9 +1,9 @@
 export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
-import { getOrCreateCurrentPlan } from "@/lib/plans";
+import { getOrCreateTodaysWorkout } from "@/lib/plans";
 
-export function GET() {
+export async function GET() {
   return NextResponse.json({
-    plan: getOrCreateCurrentPlan(),
+    workout: getOrCreateTodaysWorkout(),
   });
 }

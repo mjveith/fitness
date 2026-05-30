@@ -7,7 +7,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Fitness",
-  description: "Mobile-first workout planning, logging, and exercise guidance.",
+  description: "Mobile-first single-workout generation, logging, and exercise guidance.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,

@@ -737,7 +737,7 @@ export function WorkoutLogForm({
           })
         ) : (
           <p className="rounded-2xl border border-dashed border-white/10 px-4 py-6 text-sm text-slate-400">
-            No scheduled work for this day. Use it for recovery or regenerate the week.
+            No exercises in this generated workout. Generate a new workout to train today.
           </p>
         )}
 
