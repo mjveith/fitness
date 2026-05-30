@@ -4,7 +4,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <header className="mb-6 flex items-center justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.35em] text-sky-300">Fitness</p>
-          <h1 className="mt-2 text-2xl font-semibold text-slate-50">Gym-ready planning</h1>
+          <h1 className="mt-2 text-2xl font-semibold text-slate-50">Single-workout training</h1>
         </div>
         <div className="glass-panel rounded-2xl px-4 py-3 text-right">
           <p className="text-xs uppercase tracking-[0.25em] text-slate-400">Mode</p>

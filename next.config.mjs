@@ -26,7 +26,7 @@ const withPWA = withPWAInit({
       urlPattern: /\/api\/plan\/current$/,
       handler: "NetworkFirst",
       options: {
-        cacheName: "current-plan",
+        cacheName: "current-workout",
         expiration: {
           maxEntries: 1,
           maxAgeSeconds: 60 * 60 * 24 * 7,
@@ -34,7 +34,7 @@ const withPWA = withPWAInit({
       },
     },
     {
-      urlPattern: /\/(schedule|log|exercises|progress)$/,
+      urlPattern: /\/(workout|log|exercises|progress)$/,
       handler: "StaleWhileRevalidate",
       options: {
         cacheName: "app-shell",

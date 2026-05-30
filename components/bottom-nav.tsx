@@ -5,10 +5,10 @@ import { usePathname } from "next/navigation";
 import clsx from "clsx";
 
 const items = [
-  { href: "/schedule", label: "Schedule", icon: "S" },
+  { href: "/workout", label: "Workout", icon: "W" },
   { href: "/log", label: "Log", icon: "L" },
   { href: "/exercises", label: "Exercises", icon: "E" },
-  { href: "/progress", label: "Progress", icon: "P" },
+  { href: "/progress", label: "History", icon: "H" },
 ];
 
 export function BottomNav() {

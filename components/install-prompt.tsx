@@ -28,7 +28,7 @@ export function InstallPrompt() {
     <div className="glass-panel mb-6 rounded-3xl p-4">
       <p className="text-sm font-medium text-slate-100">Install Fitness for offline gym access.</p>
       <p className="mt-2 text-sm text-slate-300">
-        Add it to your home screen to keep the exercise library and current week close at hand.
+        Add it to your home screen to keep one-workout generation, history, and the exercise library close at hand.
       </p>
       <div className="mt-4 flex gap-3">
         <button
