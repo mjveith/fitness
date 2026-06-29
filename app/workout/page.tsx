@@ -1,7 +1,6 @@
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
-import { SectionHeader } from "@/components/section-header";
 import { getWorkoutHistoryGuidance, workoutTypeOptions } from "@/lib/plans";
 import { generateWorkoutAction } from "@/app/workout/actions";
 
@@ -10,12 +9,6 @@ export default function WorkoutPage() {
 
   return (
     <div className="space-y-6">
-      <SectionHeader
-        eyebrow="Generate"
-        title="One workout"
-        description="Pick a focus and exercise count. No weekly schedule to babysit."
-      />
-
       <section className="glass-panel space-y-4 rounded-3xl p-4">
         <div className="rounded-2xl border border-sky-400/20 bg-sky-400/10 p-4">
           <p className="text-xs uppercase tracking-[0.25em] text-sky-200">Suggested next</p>
