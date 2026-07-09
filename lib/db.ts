@@ -36,6 +36,7 @@ function initDb(db: Database.Database) {
     CREATE TABLE IF NOT EXISTS workout_plans (
       id TEXT PRIMARY KEY,
       week_start_date TEXT NOT NULL UNIQUE,
+      week_start_day INTEGER NOT NULL DEFAULT 1,
       split TEXT NOT NULL,
       workout_days INTEGER NOT NULL DEFAULT 5,
       exercises_per_workout INTEGER NOT NULL DEFAULT 5,
@@ -78,6 +79,10 @@ function initDb(db: Database.Database) {
 
   if (!workoutPlanColumnNames.has("athletic_work_json")) {
     db.exec("ALTER TABLE workout_plans ADD COLUMN athletic_work_json TEXT");
+  }
+
+  if (!workoutPlanColumnNames.has("week_start_day")) {
+    db.exec("ALTER TABLE workout_plans ADD COLUMN week_start_day INTEGER NOT NULL DEFAULT 1");
   }
 
   const upsertExercise = db.prepare(`
@@ -197,10 +202,11 @@ export function getExerciseById(id: string) {
 export function upsertWorkoutPlan(plan: WorkoutPlan) {
   const db = getDb();
   db.prepare(`
-    INSERT INTO workout_plans (id, week_start_date, split, workout_days, exercises_per_workout, athletic_work_json, days_json)
-    VALUES (@id, @weekStartDate, @split, @workoutDays, @exercisesPerWorkout, @athleticWorkJson, @daysJson)
+    INSERT INTO workout_plans (id, week_start_date, week_start_day, split, workout_days, exercises_per_workout, athletic_work_json, days_json)
+    VALUES (@id, @weekStartDate, @weekStartDay, @split, @workoutDays, @exercisesPerWorkout, @athleticWorkJson, @daysJson)
     ON CONFLICT(week_start_date) DO UPDATE SET
       id = excluded.id,
+      week_start_day = excluded.week_start_day,
       split = excluded.split,
       workout_days = excluded.workout_days,
       exercises_per_workout = excluded.exercises_per_workout,
@@ -209,6 +215,7 @@ export function upsertWorkoutPlan(plan: WorkoutPlan) {
   `).run({
     id: plan.id,
     weekStartDate: plan.weekStartDate,
+    weekStartDay: plan.weekStartDay ?? 1,
     split: plan.split,
     workoutDays: plan.workoutDays,
     exercisesPerWorkout: plan.exercisesPerWorkout,
@@ -230,6 +237,7 @@ export function getWorkoutPlanByWeek(weekStartDate: string): WorkoutPlan | null 
   return {
     id: String(row.id),
     weekStartDate: String(row.week_start_date),
+    weekStartDay: Number(row.week_start_day) as WorkoutPlan["weekStartDay"],
     split: row.split as SplitType,
     workoutDays: Number(row.workout_days) || 5,
     exercisesPerWorkout: Number(row.exercises_per_workout) || 5,

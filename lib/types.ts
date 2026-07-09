@@ -74,6 +74,7 @@ export type WorkoutPlanDay = {
 export type WorkoutPlan = {
   id: string;
   weekStartDate: string;
+  weekStartDay?: 0 | 1 | 2 | 3 | 4 | 5 | 6;
   split: SplitType;
   workoutDays: number;
   exercisesPerWorkout: number;

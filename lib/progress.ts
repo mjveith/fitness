@@ -1,10 +1,9 @@
-import { getWeekStart, formatDate } from "@/lib/date";
 import { getWorkoutLogs } from "@/lib/db";
 import { getOrCreateCurrentPlan } from "@/lib/plans";
 
 export function getWeeklySummary() {
-  const weekStartDate = formatDate(getWeekStart());
   const plan = getOrCreateCurrentPlan();
+  const weekStartDate = plan.weekStartDate;
   const logs = getWorkoutLogs(50).filter((log) => log.weekStartDate === weekStartDate);
 
   return {

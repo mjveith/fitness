@@ -41,7 +41,7 @@ for (const extension of ['.ts', '.tsx']) {
   };
 }
 
-const { createWorkoutPlan } = require(path.join(projectRoot, 'lib/plans.ts'));
+const { createWorkoutPlan, getOrCreateCurrentPlan } = require(path.join(projectRoot, 'lib/plans.ts'));
 const { exerciseCatalog } = require(path.join(projectRoot, 'lib/exercise-catalog.ts'));
 
 const planDeps = {
@@ -139,4 +139,27 @@ test('Russian Twists stay out of generated plans', () => {
 
   const names = plans.flatMap((plan) => plan.days.flatMap((day) => day.exercises.map((exercise) => exercise.name)));
   assert.equal(names.some((name) => /russian twist/i.test(name)), false);
+});
+
+test('getOrCreateCurrentPlan resolves an existing Sunday-start plan mid-week without duplicating', () => {
+  const storedPlans = new Map();
+  const deps = {
+    listExercises: () => exerciseCatalog,
+    getPlanByWeek: (weekStartDate) => storedPlans.get(weekStartDate) ?? null,
+    upsertPlan: (plan) => {
+      storedPlans.set(plan.weekStartDate, plan);
+    }
+  };
+  const sundayPlan = createWorkoutPlan(
+    { split: 'ppl', workoutDays: 5, exercisesPerWorkout: 5, weekStartDay: 0 },
+    '2026-07-05',
+    deps
+  );
+
+  const currentPlan = getOrCreateCurrentPlan('ppl', deps, new Date('2026-07-08T12:00:00'));
+
+  assert.equal(currentPlan.id, sundayPlan.id);
+  assert.equal(currentPlan.weekStartDate, '2026-07-05');
+  assert.equal(currentPlan.weekStartDay, 0);
+  assert.deepEqual([...storedPlans.keys()], ['2026-07-05']);
 });
