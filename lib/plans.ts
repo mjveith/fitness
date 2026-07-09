@@ -188,6 +188,21 @@ function chooseExercises(exercises: Exercise[], category: Exercise["category"], 
   return Array.from({ length: count }, (_, index) => matching[(cursor + index) % matching.length]);
 }
 
+function deterministicStringHash(value: string) {
+  let hash = 2166136261;
+
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  return hash >>> 0;
+}
+
+function seededCursor(weekStartDate: string, salt: string, baseCursor: number) {
+  return baseCursor + deterministicStringHash(`${weekStartDate}:${salt}`);
+}
+
 type CoreFocus = "abs" | "plank" | "stability" | "rotation" | "obliques";
 
 const coreFocusOrder: CoreFocus[] = ["abs", "plank", "stability", "rotation", "obliques"];
@@ -547,39 +562,40 @@ export function generateDays(config: PlanConfig, weekStartDate: string, exercise
   const startDate = new Date(`${weekStartDate}T00:00:00`);
   const exercisesPerWorkout = clamp(config.exercisesPerWorkout, minExercisesPerWorkout, maxExercisesPerWorkout);
   const workoutDays = clamp(config.workoutDays, minWorkoutDays, maxWorkoutDays);
+  const cursor = (salt: string, baseCursor: number) => seededCursor(weekStartDate, salt, baseCursor);
 
   const coreMix = buildBalancedCoreMix(exercises);
   const pushMix = [
-    ...chooseExercises(exercises, "chest", 3, 0),
-    ...chooseExercises(exercises, "shoulders", 2, 0),
-    ...chooseExercises(exercises, "arms", 2, 0),
+    ...chooseExercises(exercises, "chest", 3, cursor("push-chest", 0)),
+    ...chooseExercises(exercises, "shoulders", 2, cursor("push-shoulders", 0)),
+    ...chooseExercises(exercises, "arms", 2, cursor("push-arms", 0)),
   ];
   const pullMix = [
-    ...chooseExercises(exercises, "back", 5, 0),
-    ...chooseExercises(exercises, "shoulders", 1, 2),
+    ...chooseExercises(exercises, "back", 5, cursor("pull-back", 0)),
+    ...chooseExercises(exercises, "shoulders", 1, cursor("pull-shoulders", 2)),
   ];
   const legMix = [
-    ...chooseExercises(exercises, "legs", 6, 0),
+    ...chooseExercises(exercises, "legs", 6, cursor("legs", 0)),
   ];
   const cardioMix = [
-    ...chooseExercises(exercises, "cardio", 4, 0),
-    ...chooseExercises(exercises, "plyo", 4, 0),
+    ...chooseExercises(exercises, "cardio", 4, cursor("cardio", 0)),
+    ...chooseExercises(exercises, "plyo", 4, cursor("plyo", 0)),
   ];
   const upperMix = [
-    ...chooseExercises(exercises, "chest", 2, 2),
-    ...chooseExercises(exercises, "back", 2, 1),
-    ...chooseExercises(exercises, "shoulders", 2, 1),
-    ...chooseExercises(exercises, "arms", 1, 2),
+    ...chooseExercises(exercises, "chest", 2, cursor("upper-chest", 2)),
+    ...chooseExercises(exercises, "back", 2, cursor("upper-back", 1)),
+    ...chooseExercises(exercises, "shoulders", 2, cursor("upper-shoulders", 1)),
+    ...chooseExercises(exercises, "arms", 1, cursor("upper-arms", 2)),
   ];
   const fullBodyMix = [
-    ...chooseExercises(exercises, "legs", 2, 2),
-    ...chooseExercises(exercises, "chest", 2, 1),
-    ...chooseExercises(exercises, "back", 2, 3),
-    ...takeCycled(coreMix, 2, 0),
+    ...chooseExercises(exercises, "legs", 2, cursor("full-legs", 2)),
+    ...chooseExercises(exercises, "chest", 2, cursor("full-chest", 1)),
+    ...chooseExercises(exercises, "back", 2, cursor("full-back", 3)),
+    ...takeCycled(coreMix, 2, cursor("full-core", 0)),
   ];
   const lowerVolumeMix = [
-    ...chooseExercises(exercises, "legs", 5, 3),
-    ...chooseExercises(exercises, "plyo", 1, 2),
+    ...chooseExercises(exercises, "legs", 5, cursor("lower-legs", 3)),
+    ...chooseExercises(exercises, "plyo", 1, cursor("lower-plyo", 2)),
   ];
 
   const cardioTemplate = createTemplate(
@@ -604,7 +620,7 @@ export function generateDays(config: PlanConfig, weekStartDate: string, exercise
       createTemplate("Leg Strength", "Quads, glutes, hamstrings", ["legs"], legMix, exercisesPerWorkout),
       createTemplate("Upper", "Balanced press and pull accessories", ["chest", "back"], upperMix, exercisesPerWorkout),
       createTemplate("Lower Volume", "Single-leg work and posterior chain", ["legs"], lowerVolumeMix, exercisesPerWorkout),
-      createTemplate("Shoulders + Core", "Delts, posture, and trunk control", ["shoulders"], [...chooseExercises(exercises, "shoulders", 5, 0), ...takeCycled(coreMix, 3, 2)], exercisesPerWorkout),
+      createTemplate("Shoulders + Core", "Delts, posture, and trunk control", ["shoulders"], [...chooseExercises(exercises, "shoulders", 5, cursor("shoulders-core-shoulders", 0)), ...takeCycled(coreMix, 3, cursor("shoulders-core-core", 2))], exercisesPerWorkout),
     ],
     "upper-lower": [
       createTemplate("Upper Strength", "Chest, back, and shoulders", ["chest", "back", "shoulders"], upperMix, exercisesPerWorkout),
@@ -617,10 +633,10 @@ export function generateDays(config: PlanConfig, weekStartDate: string, exercise
     "full-body": [
       createTemplate("Full Body A", "Squat, press, row", ["legs", "chest", "back", "core"], fullBodyMix, exercisesPerWorkout),
       createTemplate("Full Body B", "Hinge, pull, unilateral work", ["legs", "chest", "back", "core"], [...fullBodyMix].reverse(), exercisesPerWorkout),
-      createTemplate("Full Body C", "Strength plus trunk stability", ["legs", "chest", "back", "core"], [...fullBodyMix, ...takeCycled(coreMix, 2, 2)], exercisesPerWorkout),
+      createTemplate("Full Body C", "Strength plus trunk stability", ["legs", "chest", "back", "core"], [...fullBodyMix, ...takeCycled(coreMix, 2, cursor("full-c-core", 2))], exercisesPerWorkout),
       createTemplate("Lower Power", "Jump, hinge, and squat emphasis", ["legs"], lowerVolumeMix, exercisesPerWorkout),
       createTemplate("Upper Balance", "Press, row, and scapular control", ["chest", "back"], upperMix, exercisesPerWorkout),
-      createTemplate("Full Body D", "Mixed compound strength", ["legs", "chest", "back", "core"], [...fullBodyMix, ...chooseExercises(exercises, "legs", 2, 5)], exercisesPerWorkout),
+      createTemplate("Full Body D", "Mixed compound strength", ["legs", "chest", "back", "core"], [...fullBodyMix, ...chooseExercises(exercises, "legs", 2, cursor("full-d-legs", 5))], exercisesPerWorkout),
     ],
   };
 

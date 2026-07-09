@@ -326,42 +326,71 @@ export function getWorkoutLogs(limit = 30): WorkoutLog[] {
 }
 
 export function getLastExerciseEntry(exerciseId: string) {
-  const logs = getWorkoutLogs(100);
+  const db = getDb();
+  const row = db.prepare(`
+    SELECT log.date, entry.value AS entry_json
+    FROM (
+      SELECT *
+      FROM workout_logs
+      ORDER BY date DESC, created_at DESC
+      LIMIT 100
+    ) AS log
+    JOIN json_each(log.entries_json) AS entry
+    WHERE json_extract(entry.value, '$.exerciseId') = @exerciseId
+    ORDER BY log.date DESC, log.created_at DESC, CAST(entry.key AS INTEGER) ASC
+    LIMIT 1
+  `).get({ exerciseId }) as { date: string; entry_json: string } | undefined;
 
-  for (const log of logs) {
-    const entry = log.entries.find((item) => item.exerciseId === exerciseId);
+  if (row) {
+    const entry = JSON.parse(row.entry_json) as WorkoutLog["entries"][number];
 
-    if (entry) {
-      return {
-        date: log.date,
-        sets: entry.sets,
-        actualSetCount: entry.actualSetCount,
-      };
-    }
+    return {
+      date: row.date,
+      sets: entry.sets,
+      actualSetCount: entry.actualSetCount,
+    };
   }
 
   return null;
 }
 
 export function getExerciseHistory(exerciseId: string) {
-  return getWorkoutLogs(120)
-    .map((log) => {
-      const entry = log.entries.find((item) => item.exerciseId === exerciseId);
+  const db = getDb();
+  const rows = db.prepare(`
+    WITH matched_entries AS (
+      SELECT
+        log.id,
+        log.date,
+        log.created_at,
+        entry.value AS entry_json,
+        ROW_NUMBER() OVER (PARTITION BY log.id ORDER BY CAST(entry.key AS INTEGER) ASC) AS entry_rank
+      FROM (
+        SELECT *
+        FROM workout_logs
+        ORDER BY date DESC, created_at DESC
+        LIMIT 120
+      ) AS log
+      JOIN json_each(log.entries_json) AS entry
+      WHERE json_extract(entry.value, '$.exerciseId') = @exerciseId
+    )
+    SELECT date, entry_json
+    FROM matched_entries
+    WHERE entry_rank = 1
+    ORDER BY date DESC, created_at DESC
+  `).all({ exerciseId }) as Array<{ date: string; entry_json: string }>;
 
-      if (!entry) {
-        return null;
-      }
+  return rows.map((row) => {
+    const entry = JSON.parse(row.entry_json) as WorkoutLog["entries"][number];
 
-      return {
-        date: log.date,
-        sets: entry.sets,
-        totalVolume: entry.sets.reduce((sum, set) => {
-          if (typeof set.weight === "number" && typeof set.reps === "number") {
-            return sum + set.weight * set.reps;
-          }
-          return sum;
-        }, 0),
-      };
-    })
-    .filter((item): item is { date: string; sets: WorkoutLog["entries"][number]["sets"]; totalVolume: number } => item !== null);
+    return {
+      date: row.date,
+      sets: entry.sets,
+      totalVolume: entry.sets.reduce((sum, set) => {
+        if (typeof set.weight === "number" && typeof set.reps === "number") {
+          return sum + set.weight * set.reps;
+        }
+        return sum;
+      }, 0),
+    };
+  });
 }
