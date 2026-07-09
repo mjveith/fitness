@@ -1,20 +1,23 @@
 export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { getExerciseById, getWorkoutPlanByWeek, upsertWorkoutPlan } from "@/lib/db";
+import { swapPayloadSchema } from "@/lib/validation";
 
 export async function POST(request: NextRequest) {
+  let json: unknown;
   try {
-    const body = await request.json();
-    const { weekStartDate, dayIndex, exerciseIndex, newExerciseId } = body;
+    json = await request.json();
+  } catch {
+    return NextResponse.json({ error: "invalid JSON" }, { status: 400 });
+  }
 
-    if (
-      !weekStartDate ||
-      !newExerciseId ||
-      typeof dayIndex !== "number" ||
-      typeof exerciseIndex !== "number"
-    ) {
-      return NextResponse.json({ error: "Missing fields" }, { status: 400 });
-    }
+  const parsed = swapPayloadSchema.safeParse(json);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "invalid payload", issues: parsed.error.issues }, { status: 400 });
+  }
+
+  try {
+    const { weekStartDate, dayIndex, exerciseIndex, newExerciseId } = parsed.data;
 
     const newExercise = getExerciseById(newExerciseId);
     if (!newExercise) {
