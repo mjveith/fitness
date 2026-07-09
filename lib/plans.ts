@@ -177,6 +177,11 @@ const athleticTemplates: AthleticTemplate[] = [
 
 function chooseExercises(exercises: Exercise[], category: Exercise["category"], count: number, cursor: number) {
   const matching = exercises.filter((exercise) => exercise.category === category);
+
+  if (matching.length === 0) {
+    return [];
+  }
+
   return Array.from({ length: count }, (_, index) => matching[(cursor + index) % matching.length]);
 }
 
@@ -364,15 +369,17 @@ function buildDay(
   date: string,
   workoutType: string,
   focus: string,
-  selections: Exercise[],
+  selections: Array<Exercise | null | undefined>,
 ): WorkoutPlanDay {
+  const selectedExercises = selections.filter((exercise): exercise is Exercise => exercise != null);
+
   return {
     dayOfWeek: index,
     date,
     label: dayLabels[new Date(`${date}T00:00:00`).getDay()],
     workoutType,
     focus,
-    exercises: selections.map((exercise) => ({
+    exercises: selectedExercises.map((exercise) => ({
       exerciseId: exercise.id,
       name: exercise.name,
       type: exercise.type,
@@ -624,9 +631,17 @@ export function generateDays(config: PlanConfig, weekStartDate: string, exercise
     createTemplate("Rest / Recovery", "Walk, mobility, and easy recovery work", [], [], exercisesPerWorkout),
   );
 
-  const strengthDays = [...workoutSequence, ...restDays].map((template, index) =>
-    buildDay(index, formatDate(addDays(startDate, index)), template.workoutType, template.focus, template.exercises),
-  );
+  const strengthDays = [...workoutSequence, ...restDays].map((template, index) => {
+    const day = buildDay(index, formatDate(addDays(startDate, index)), template.workoutType, template.focus, template.exercises);
+
+    if (template.workoutType !== "Rest / Recovery" && day.exercises.length === 0) {
+      console.warn(
+        `No exercises generated for workout template "${template.workoutType}" (${template.focus}). Check exercise catalog coverage.`,
+      );
+    }
+
+    return day;
+  });
 
   return applyAthleticWork(strengthDays, normalizeAthleticWork(config.athleticWork));
 }
