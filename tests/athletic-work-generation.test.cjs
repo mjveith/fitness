@@ -1,13 +1,11 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
 const Module = require('module');
 const ts = require('typescript');
 
 const projectRoot = path.resolve(__dirname, '..');
-process.env.FITNESS_DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'fitness-athletic-work-'));
 
 const originalResolveFilename = Module._resolveFilename;
 Module._resolveFilename = function resolveFilename(request, parent, isMain, options) {
@@ -41,7 +39,14 @@ for (const extension of ['.ts', '.tsx']) {
 }
 
 const { createWorkoutPlan } = require(path.join(projectRoot, 'lib/plans.ts'));
-const { getWorkoutPlanByWeek } = require(path.join(projectRoot, 'lib/db.ts'));
+const { exerciseCatalog } = require(path.join(projectRoot, 'lib/exercise-catalog.ts'));
+
+const savedPlans = new Map();
+const planDeps = {
+  listExercises: () => exerciseCatalog,
+  getPlanByWeek: (weekStartDate) => savedPlans.get(weekStartDate) ?? null,
+  upsertPlan: (plan) => savedPlans.set(plan.weekStartDate, plan)
+};
 
 function athleticExercises(plan) {
   return plan.days.flatMap((day) => day.exercises.filter((exercise) => exercise.exerciseId.startsWith('athletic-')));
@@ -63,7 +68,7 @@ test('athletic work can be generated alongside an existing strength split', () =
       placementMode: 'auto',
       preferredDays: []
     }
-  }, '2026-05-11');
+  }, '2026-05-11', planDeps);
 
   assert.equal(plan.split, 'upper-lower');
   assert.equal(plan.days.length, 7);
@@ -100,7 +105,7 @@ test('preferred locked placement puts athletic work on requested days without re
       placementMode: 'locked',
       preferredDays: [2, 5]
     }
-  }, '2026-05-18');
+  }, '2026-05-18', planDeps);
 
   assert.deepEqual(
     daysWithAthleticWork(plan).map((day) => `${day.label}:${day.date}`),
@@ -125,7 +130,7 @@ test('frequency one combines every selected athletic modality into one workout',
       placementMode: 'auto',
       preferredDays: []
     }
-  }, '2026-05-11');
+  }, '2026-05-11', planDeps);
 
   const athleticDays = daysWithAthleticWork(plan);
   assert.equal(athleticDays.length, 1);
@@ -136,7 +141,7 @@ test('frequency one combines every selected athletic modality into one workout',
 });
 
 test('athletic work settings persist with the generated week', () => {
-  const saved = getWorkoutPlanByWeek('2026-05-18');
+  const saved = planDeps.getPlanByWeek('2026-05-18');
 
   assert.ok(saved);
   assert.equal(saved.athleticWork.frequency, 2);
