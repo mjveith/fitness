@@ -27,7 +27,7 @@ and an Opus reviewer approves + merges. No PR merges without green CI + review.
 | P2-1 | README, ESLint config, and CI | P2 (done first) | ✅ (#1) |
 | P0-1 | Fix UTC/local timezone mismatch in date utilities | P0 | ✅ (#2) |
 | P0-2 | Validate and harden API route inputs | P0 | ✅ (#3) |
-| P0-3 | Guard empty-category crashes in plan generation | P0 | ⬜ |
+| P0-3 | Guard empty-category crashes in plan generation | P0 | ✅ (#5) |
 | P0-4 | Make the offline log queue resilient | P0 | ⬜ |
 | P1-1 | Week-start mismatch (/api/plan/current vs user week start) | P1 | ⬜ |
 | P1-2 | Decouple plan generation from the database (testability) | P1 | ✅ (#4) |
