@@ -26,6 +26,7 @@ export async function generatePlanAction(formData: FormData) {
     split,
     workoutDays,
     exercisesPerWorkout,
+    weekStartDay,
     athleticWork: {
       frequency: athleticFrequency,
       intensity: athleticIntensity,

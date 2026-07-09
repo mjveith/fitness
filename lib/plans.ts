@@ -1,4 +1,4 @@
-import { getWeekStart, addDays, formatDate } from "@/lib/date";
+import { WeekStartDay, getWeekStart, addDays, formatDate } from "@/lib/date";
 import { AthleticIntensity, AthleticModality, AthleticPlacementMode, AthleticWorkConfig, Exercise, PlanExercise, SplitType, WorkoutPlan, WorkoutPlanDay } from "@/lib/types";
 
 const dayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -23,6 +23,7 @@ type PlanConfig = {
   split: SplitType;
   workoutDays: number;
   exercisesPerWorkout: number;
+  weekStartDay?: WeekStartDay;
   athleticWork?: Partial<AthleticWorkConfig>;
 };
 
@@ -31,6 +32,8 @@ type PlanPersistenceDeps = {
   getPlanByWeek: (weekStartDate: string) => WorkoutPlan | null;
   upsertPlan: (plan: WorkoutPlan) => void;
 };
+
+const weekStartDays: WeekStartDay[] = [0, 1, 2, 3, 4, 5, 6];
 
 function getDefaultPlanDeps(): PlanPersistenceDeps {
   const db = require("@/lib/db") as typeof import("@/lib/db");
@@ -646,18 +649,37 @@ export function generateDays(config: PlanConfig, weekStartDate: string, exercise
   return applyAthleticWork(strengthDays, normalizeAthleticWork(config.athleticWork));
 }
 
-export function getOrCreateCurrentPlan(split: SplitType = "ppl", deps = getDefaultPlanDeps()) {
-  const weekStartDate = formatDate(getWeekStart());
-  const existing = deps.getPlanByWeek(weekStartDate);
+export function resolveCurrentPlan(deps: PlanPersistenceDeps, today = new Date()) {
+  const candidates = weekStartDays
+    .map((weekStartDay) => formatDate(getWeekStart(today, weekStartDay)))
+    .sort((left, right) => right.localeCompare(left));
+
+  for (const weekStartDate of candidates) {
+    const existing = deps.getPlanByWeek(weekStartDate);
+
+    if (existing) {
+      return existing;
+    }
+  }
+
+  return null;
+}
+
+export function getOrCreateCurrentPlan(split: SplitType = "ppl", deps = getDefaultPlanDeps(), today = new Date()) {
+  const existing = resolveCurrentPlan(deps, today);
 
   if (existing) {
     return existing;
   }
 
+  const weekStartDay: WeekStartDay = 1;
+  const weekStartDate = formatDate(getWeekStart(today, weekStartDay));
+
   return createWorkoutPlan({
     split,
     workoutDays: defaultWorkoutDays,
     exercisesPerWorkout: defaultExercisesPerWorkout,
+    weekStartDay,
   }, weekStartDate, deps);
 }
 
@@ -676,6 +698,7 @@ export function createWorkoutPlan(config: PlanConfig, weekStartDate = formatDate
   const plan: WorkoutPlan = {
     id: `plan-${weekStartDate}-${config.split}-${workoutDays}-${exercisesPerWorkout}${athleticId}`,
     weekStartDate,
+    weekStartDay: config.weekStartDay ?? 1,
     split: config.split,
     workoutDays,
     exercisesPerWorkout,
