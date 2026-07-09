@@ -101,7 +101,7 @@ test('mapped media uses non-SVG real-life assets only', () => {
   assert.deepEqual(svgMappings, []);
 });
 
-test('mapped media URLs are reachable', async () => {
+test('mapped media URLs are reachable', { skip: process.env.RUN_NETWORK_TESTS ? false : 'network test — set RUN_NETWORK_TESTS=1 to run' }, async () => {
   const checks = [];
 
   for (const [exerciseId, urls] of Object.entries(exerciseImageMap)) {

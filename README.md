@@ -48,3 +48,9 @@ The app serves on **port 3102**. `scripts/setup-tunnel.sh` sets up external acce
 ## Testing notes
 
 Tests use `node:test` and load TypeScript modules through a shared transpile loader. Run the whole suite with `npm test`. Plan-generation tests are being refactored toward pure/injected inputs so they can run without a compiled `better-sqlite3`.
+
+The `mapped media URLs are reachable` check in `tests/exercise-media-coverage.test.cjs` makes real network requests and is **skipped by default** (it can't gate CI reliably). Run it on demand with:
+
+```bash
+RUN_NETWORK_TESTS=1 npm test
+```
