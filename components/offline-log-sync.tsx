@@ -1,47 +1,79 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Toast } from "@/components/toast";
+import {
+  classifyOfflineSyncOutcome,
+  clearOfflineLogQueue,
+  moveOfflineLogsToDeadLetter,
+  readOfflineLogQueue,
+} from "@/lib/offline-queue";
 
-const queueKey = "fp-pending-logs-v1";
+const deadLetterToastMessage = "A queued workout could not sync. Please log it again.";
 
-async function flushQueue() {
-  const raw = window.localStorage.getItem(queueKey);
+let flushInFlight = false;
 
-  if (!raw) {
+async function flushQueue(onDeadLetter: () => void) {
+  if (flushInFlight) {
     return;
   }
 
-  const queued = JSON.parse(raw) as unknown[];
+  flushInFlight = true;
 
-  if (!Array.isArray(queued) || queued.length === 0) {
-    window.localStorage.removeItem(queueKey);
-    return;
-  }
+  try {
+    const queue = readOfflineLogQueue(window.localStorage);
 
-  const response = await fetch("/api/logs/sync", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ logs: queued }),
-  });
+    if (queue.kind !== "ready") {
+      return;
+    }
 
-  if (response.ok) {
-    window.localStorage.removeItem(queueKey);
+    const outcome = await fetch("/api/logs/sync", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ logs: queue.logs }),
+    })
+      .then((response) => classifyOfflineSyncOutcome({ status: response.status }))
+      .catch(() => classifyOfflineSyncOutcome({ networkError: true }));
+
+    if (outcome === "clear") {
+      clearOfflineLogQueue(window.localStorage);
+      return;
+    }
+
+    if (outcome === "dead-letter") {
+      moveOfflineLogsToDeadLetter(window.localStorage, queue.logs);
+      onDeadLetter();
+    }
+  } finally {
+    flushInFlight = false;
   }
 }
 
 export function OfflineLogSync() {
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const hasShownDeadLetterToast = useRef(false);
+
   useEffect(() => {
-    void flushQueue();
+    const handleDeadLetter = () => {
+      if (hasShownDeadLetterToast.current) {
+        return;
+      }
+
+      hasShownDeadLetterToast.current = true;
+      setToastMessage(deadLetterToastMessage);
+    };
+
+    void flushQueue(handleDeadLetter);
 
     const handleOnline = () => {
-      void flushQueue();
+      void flushQueue(handleDeadLetter);
     };
 
     window.addEventListener("online", handleOnline);
     return () => window.removeEventListener("online", handleOnline);
   }, []);
 
-  return null;
+  return <Toast message={toastMessage} onDone={() => setToastMessage(null)} />;
 }
