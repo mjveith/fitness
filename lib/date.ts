@@ -39,7 +39,7 @@ export function addDays(date: Date, days: number) {
 }
 
 export function formatDisplayDate(dateString: string) {
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat(undefined, {
     weekday: "short",
     month: "short",
     day: "numeric",
