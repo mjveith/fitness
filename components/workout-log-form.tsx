@@ -577,7 +577,7 @@ export function WorkoutLogForm({
                         Completed exercises save to history. Fill every set or tap Mark complete to save this exercise.
                       </p>
                       {exercise.lastEntrySets?.length ? (
-                        <p className="mt-1 text-xs text-slate-500">Use Last time as a reference; today's inputs start blank.</p>
+                        <p className="mt-1 text-xs text-slate-500">Use Last time as a reference; today&apos;s inputs start blank.</p>
                       ) : null}
                     </div>
                     <div className="flex flex-wrap items-center justify-end gap-2">
