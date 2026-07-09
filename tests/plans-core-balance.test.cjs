@@ -1,14 +1,11 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
 const Module = require('module');
 const ts = require('typescript');
 
 const projectRoot = path.resolve(__dirname, '..');
-const testDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'fitness-core-balance-'));
-process.env.FITNESS_DATA_DIR = testDataDir;
 
 const originalResolveFilename = Module._resolveFilename;
 Module._resolveFilename = function resolveFilename(request, parent, isMain, options) {
@@ -45,6 +42,13 @@ for (const extension of ['.ts', '.tsx']) {
 }
 
 const { createWorkoutPlan } = require(path.join(projectRoot, 'lib/plans.ts'));
+const { exerciseCatalog } = require(path.join(projectRoot, 'lib/exercise-catalog.ts'));
+
+const planDeps = {
+  listExercises: () => exerciseCatalog,
+  getPlanByWeek: () => null,
+  upsertPlan: () => undefined
+};
 
 const OBLIQUE_NAMES = new Set([
   'Side Plank',
@@ -64,7 +68,8 @@ function planFor(split, workoutDays = 5, exercisesPerWorkout = 5) {
   planCounter += 1;
   return createWorkoutPlan(
     { split, workoutDays, exercisesPerWorkout },
-    `2026-06-${String(planCounter).padStart(2, '0')}`
+    `2026-06-${String(planCounter).padStart(2, '0')}`,
+    planDeps
   );
 }
 

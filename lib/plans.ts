@@ -1,5 +1,4 @@
 import { getWeekStart, addDays, formatDate } from "@/lib/date";
-import { getWorkoutPlanByWeek, listExercises, upsertWorkoutPlan } from "@/lib/db";
 import { AthleticIntensity, AthleticModality, AthleticPlacementMode, AthleticWorkConfig, Exercise, PlanExercise, SplitType, WorkoutPlan, WorkoutPlanDay } from "@/lib/types";
 
 const dayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -26,6 +25,22 @@ type PlanConfig = {
   exercisesPerWorkout: number;
   athleticWork?: Partial<AthleticWorkConfig>;
 };
+
+type PlanPersistenceDeps = {
+  listExercises: () => Exercise[];
+  getPlanByWeek: (weekStartDate: string) => WorkoutPlan | null;
+  upsertPlan: (plan: WorkoutPlan) => void;
+};
+
+function getDefaultPlanDeps(): PlanPersistenceDeps {
+  const db = require("@/lib/db") as typeof import("@/lib/db");
+
+  return {
+    listExercises: db.listExercises,
+    getPlanByWeek: db.getWorkoutPlanByWeek,
+    upsertPlan: db.upsertWorkoutPlan,
+  };
+}
 
 type DayTemplate = {
   workoutType: string;
@@ -518,8 +533,7 @@ function buildWorkoutSequence(
   ].slice(0, workoutDays);
 }
 
-function generateDays(config: PlanConfig, weekStartDate: string): WorkoutPlanDay[] {
-  const exercises = listExercises();
+export function generateDays(config: PlanConfig, weekStartDate: string, exercises: Exercise[]): WorkoutPlanDay[] {
   const startDate = new Date(`${weekStartDate}T00:00:00`);
   const exercisesPerWorkout = clamp(config.exercisesPerWorkout, minExercisesPerWorkout, maxExercisesPerWorkout);
   const workoutDays = clamp(config.workoutDays, minWorkoutDays, maxWorkoutDays);
@@ -617,9 +631,9 @@ function generateDays(config: PlanConfig, weekStartDate: string): WorkoutPlanDay
   return applyAthleticWork(strengthDays, normalizeAthleticWork(config.athleticWork));
 }
 
-export function getOrCreateCurrentPlan(split: SplitType = "ppl") {
+export function getOrCreateCurrentPlan(split: SplitType = "ppl", deps = getDefaultPlanDeps()) {
   const weekStartDate = formatDate(getWeekStart());
-  const existing = getWorkoutPlanByWeek(weekStartDate);
+  const existing = deps.getPlanByWeek(weekStartDate);
 
   if (existing) {
     return existing;
@@ -629,10 +643,10 @@ export function getOrCreateCurrentPlan(split: SplitType = "ppl") {
     split,
     workoutDays: defaultWorkoutDays,
     exercisesPerWorkout: defaultExercisesPerWorkout,
-  }, weekStartDate);
+  }, weekStartDate, deps);
 }
 
-export function createWorkoutPlan(config: PlanConfig, weekStartDate = formatDate(getWeekStart())) {
+export function createWorkoutPlan(config: PlanConfig, weekStartDate = formatDate(getWeekStart()), deps = getDefaultPlanDeps()) {
   const workoutDays = clamp(config.workoutDays, minWorkoutDays, maxWorkoutDays);
   const exercisesPerWorkout = clamp(
     config.exercisesPerWorkout,
@@ -643,6 +657,7 @@ export function createWorkoutPlan(config: PlanConfig, weekStartDate = formatDate
   const athleticId = athleticWork.frequency > 0
     ? `-athletic-${athleticWork.frequency}-${athleticWork.intensity}-${athleticWork.placementMode}-${athleticWork.modalities.join("_")}-${athleticWork.preferredDays.join("_")}`
     : "";
+  const exercises = deps.listExercises();
   const plan: WorkoutPlan = {
     id: `plan-${weekStartDate}-${config.split}-${workoutDays}-${exercisesPerWorkout}${athleticId}`,
     weekStartDate,
@@ -658,15 +673,16 @@ export function createWorkoutPlan(config: PlanConfig, weekStartDate = formatDate
         athleticWork,
       },
       weekStartDate,
+      exercises,
     ),
   };
 
-  upsertWorkoutPlan(plan);
+  deps.upsertPlan(plan);
   return plan;
 }
 
-export function swapWorkoutPlanDays(weekStartDate: string, sourceIndex: number, targetIndex: number) {
-  const plan = getWorkoutPlanByWeek(weekStartDate) ?? getOrCreateCurrentPlan();
+export function swapWorkoutPlanDays(weekStartDate: string, sourceIndex: number, targetIndex: number, deps = getDefaultPlanDeps()) {
+  const plan = deps.getPlanByWeek(weekStartDate) ?? getOrCreateCurrentPlan("ppl", deps);
   const days = [...plan.days];
 
   if (
@@ -700,6 +716,6 @@ export function swapWorkoutPlanDays(weekStartDate: string, sourceIndex: number, 
     days,
   };
 
-  upsertWorkoutPlan(nextPlan);
+  deps.upsertPlan(nextPlan);
   return nextPlan;
 }

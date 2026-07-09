@@ -1,13 +1,11 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
 const Module = require('module');
 const ts = require('typescript');
 
 const projectRoot = path.resolve(__dirname, '..');
-process.env.FITNESS_DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'fitness-week-start-'));
 
 const originalResolveFilename = Module._resolveFilename;
 Module._resolveFilename = function resolveFilename(request, parent, isMain, options) {
@@ -45,11 +43,19 @@ for (const extension of ['.ts', '.tsx']) {
 
 const { formatDate, getWeekStart } = require(path.join(projectRoot, 'lib/date.ts'));
 const { createWorkoutPlan } = require(path.join(projectRoot, 'lib/plans.ts'));
+const { exerciseCatalog } = require(path.join(projectRoot, 'lib/exercise-catalog.ts'));
+
+const planDeps = {
+  listExercises: () => exerciseCatalog,
+  getPlanByWeek: () => null,
+  upsertPlan: () => undefined
+};
 
 function createPlan(weekStartDate) {
   return createWorkoutPlan(
     { split: 'ppl', workoutDays: 5, exercisesPerWorkout: 5 },
-    weekStartDate
+    weekStartDate,
+    planDeps
   );
 }
 
