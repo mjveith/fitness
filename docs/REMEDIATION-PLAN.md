@@ -34,7 +34,7 @@ and an Opus reviewer approves + merges. No PR merges without green CI + review.
 | P1-3 | Deduplicate exercise-swap logic | P1 | ✅ (#8) |
 | P1-4 | Remove committed build artifacts; modernize test harness | P1 | ✅ (#1 + #9) |
 | P1-5 | Split the 889-line workout-log-form component | P1 | ✅ (#10) |
-| P2-2 | Weekly plan variety and quality-of-life improvements | P2 | ⬜ |
+| P2-2 | Weekly plan variety and quality-of-life improvements | P2 | ✅ (#11) |
 
 ---
 
