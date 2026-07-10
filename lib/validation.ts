@@ -110,6 +110,12 @@ export const swapPayloadSchema = z.object({
   newExerciseId: z.string().trim().min(1),
 });
 
+export const singleWorkoutRequestSchema = z.object({
+  workoutType: z.enum(["full-body", "push", "pull", "legs", "core", "sprints", "athletic-conditioning"]),
+  exerciseCount: z.coerce.number().int().min(1).max(10),
+});
+
 export type OfflineLogPayload = z.infer<typeof offlineLogSchema>;
 export type OfflineLogsSyncPayload = z.infer<typeof offlineLogsSyncPayloadSchema>;
 export type SwapPayload = z.infer<typeof swapPayloadSchema>;
+export type SingleWorkoutRequest = z.infer<typeof singleWorkoutRequestSchema>;

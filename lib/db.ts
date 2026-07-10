@@ -36,7 +36,6 @@ function initDb(db: Database.Database) {
     CREATE TABLE IF NOT EXISTS workout_plans (
       id TEXT PRIMARY KEY,
       week_start_date TEXT NOT NULL UNIQUE,
-      week_start_day INTEGER NOT NULL DEFAULT 1,
       split TEXT NOT NULL,
       workout_days INTEGER NOT NULL DEFAULT 5,
       exercises_per_workout INTEGER NOT NULL DEFAULT 5,
@@ -79,10 +78,6 @@ function initDb(db: Database.Database) {
 
   if (!workoutPlanColumnNames.has("athletic_work_json")) {
     db.exec("ALTER TABLE workout_plans ADD COLUMN athletic_work_json TEXT");
-  }
-
-  if (!workoutPlanColumnNames.has("week_start_day")) {
-    db.exec("ALTER TABLE workout_plans ADD COLUMN week_start_day INTEGER NOT NULL DEFAULT 1");
   }
 
   const upsertExercise = db.prepare(`
@@ -202,11 +197,10 @@ export function getExerciseById(id: string) {
 export function upsertWorkoutPlan(plan: WorkoutPlan) {
   const db = getDb();
   db.prepare(`
-    INSERT INTO workout_plans (id, week_start_date, week_start_day, split, workout_days, exercises_per_workout, athletic_work_json, days_json)
-    VALUES (@id, @weekStartDate, @weekStartDay, @split, @workoutDays, @exercisesPerWorkout, @athleticWorkJson, @daysJson)
+    INSERT INTO workout_plans (id, week_start_date, split, workout_days, exercises_per_workout, athletic_work_json, days_json)
+    VALUES (@id, @weekStartDate, @split, @workoutDays, @exercisesPerWorkout, @athleticWorkJson, @daysJson)
     ON CONFLICT(week_start_date) DO UPDATE SET
       id = excluded.id,
-      week_start_day = excluded.week_start_day,
       split = excluded.split,
       workout_days = excluded.workout_days,
       exercises_per_workout = excluded.exercises_per_workout,
@@ -215,7 +209,6 @@ export function upsertWorkoutPlan(plan: WorkoutPlan) {
   `).run({
     id: plan.id,
     weekStartDate: plan.weekStartDate,
-    weekStartDay: plan.weekStartDay ?? 1,
     split: plan.split,
     workoutDays: plan.workoutDays,
     exercisesPerWorkout: plan.exercisesPerWorkout,
@@ -237,7 +230,6 @@ export function getWorkoutPlanByWeek(weekStartDate: string): WorkoutPlan | null 
   return {
     id: String(row.id),
     weekStartDate: String(row.week_start_date),
-    weekStartDay: Number(row.week_start_day) as WorkoutPlan["weekStartDay"],
     split: row.split as SplitType,
     workoutDays: Number(row.workout_days) || 5,
     exercisesPerWorkout: Number(row.exercises_per_workout) || 5,
@@ -326,71 +318,42 @@ export function getWorkoutLogs(limit = 30): WorkoutLog[] {
 }
 
 export function getLastExerciseEntry(exerciseId: string) {
-  const db = getDb();
-  const row = db.prepare(`
-    SELECT log.date, entry.value AS entry_json
-    FROM (
-      SELECT *
-      FROM workout_logs
-      ORDER BY date DESC, created_at DESC
-      LIMIT 100
-    ) AS log
-    JOIN json_each(log.entries_json) AS entry
-    WHERE json_extract(entry.value, '$.exerciseId') = @exerciseId
-    ORDER BY log.date DESC, log.created_at DESC, CAST(entry.key AS INTEGER) ASC
-    LIMIT 1
-  `).get({ exerciseId }) as { date: string; entry_json: string } | undefined;
+  const logs = getWorkoutLogs(100);
 
-  if (row) {
-    const entry = JSON.parse(row.entry_json) as WorkoutLog["entries"][number];
+  for (const log of logs) {
+    const entry = log.entries.find((item) => item.exerciseId === exerciseId);
 
-    return {
-      date: row.date,
-      sets: entry.sets,
-      actualSetCount: entry.actualSetCount,
-    };
+    if (entry) {
+      return {
+        date: log.date,
+        sets: entry.sets,
+        actualSetCount: entry.actualSetCount,
+      };
+    }
   }
 
   return null;
 }
 
 export function getExerciseHistory(exerciseId: string) {
-  const db = getDb();
-  const rows = db.prepare(`
-    WITH matched_entries AS (
-      SELECT
-        log.id,
-        log.date,
-        log.created_at,
-        entry.value AS entry_json,
-        ROW_NUMBER() OVER (PARTITION BY log.id ORDER BY CAST(entry.key AS INTEGER) ASC) AS entry_rank
-      FROM (
-        SELECT *
-        FROM workout_logs
-        ORDER BY date DESC, created_at DESC
-        LIMIT 120
-      ) AS log
-      JOIN json_each(log.entries_json) AS entry
-      WHERE json_extract(entry.value, '$.exerciseId') = @exerciseId
-    )
-    SELECT date, entry_json
-    FROM matched_entries
-    WHERE entry_rank = 1
-    ORDER BY date DESC, created_at DESC
-  `).all({ exerciseId }) as Array<{ date: string; entry_json: string }>;
+  return getWorkoutLogs(120)
+    .map((log) => {
+      const entry = log.entries.find((item) => item.exerciseId === exerciseId);
 
-  return rows.map((row) => {
-    const entry = JSON.parse(row.entry_json) as WorkoutLog["entries"][number];
+      if (!entry) {
+        return null;
+      }
 
-    return {
-      date: row.date,
-      sets: entry.sets,
-      totalVolume: entry.sets.reduce((sum, set) => {
-        if (typeof set.weight === "number" && typeof set.reps === "number") {
-          return sum + set.weight * set.reps;
-        }
-        return sum;
-      }, 0),
-    };
-  });
+      return {
+        date: log.date,
+        sets: entry.sets,
+        totalVolume: entry.sets.reduce((sum, set) => {
+          if (typeof set.weight === "number" && typeof set.reps === "number") {
+            return sum + set.weight * set.reps;
+          }
+          return sum;
+        }, 0),
+      };
+    })
+    .filter((item): item is { date: string; sets: WorkoutLog["entries"][number]["sets"]; totalVolume: number } => item !== null);
 }

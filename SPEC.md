@@ -1,72 +1,63 @@
-# Fitness — V1 Spec
+# Fitness — Current Spec
 
 ## Overview
-A Progressive Web App (PWA) for generating weekly workout schedules, logging exercises, and viewing real-life instructional exercise media. Must be accessible over cellular.
+A Progressive Web App (PWA) for generating exactly one workout at a time, logging it reliably, and using workout history to decide the next focus. Must be accessible over cellular.
 
 ## Tech Stack
 - **Frontend**: Next.js 14 (App Router) + Tailwind CSS + PWA (next-pwa)
 - **Backend**: Next.js API routes
-- **Database**: SQLite via better-sqlite3 (local, lightweight, zero config)
+- **Database**: SQLite via better-sqlite3
 - **Hosting**: Mac mini — Caddy reverse proxy, accessible via Tailscale or public URL
 - **Port**: 3102 (dev), 3103 (if separate live needed)
 
-## Core Features (V1)
+## Core Features
 
-### 1. Weekly Schedule Generator
-- Generate a 7-day workout plan based on user preferences
-- Workout types: **Strength Training**, **HIIT/Sprints**, **Plyometrics**, **Bodyweight**, **Rest/Recovery**
-- Configurable split: push/pull/legs, upper/lower, full body, custom
-- Each day shows: workout type, exercise list, target sets/reps, rest periods
-- Ability to regenerate or swap individual days
+### 1. Single-Workout Generator
+- Primary UX is `/workout`, not a weekly schedule.
+- Minimal inputs: **workout type** and **number of exercises**.
+- Supported workout types: full body, push, pull, legs, core, sprints, athletic conditioning.
+- Generated workout opens in `/log` and can be completed like any prior planned session.
+- `/schedule` is retained only as a redirect to `/workout` for old links.
 
-### 2. Exercise Library
-- Curated exercise database (~100+ exercises for V1)
-- Categories: chest, back, shoulders, arms, legs, core, cardio, plyometrics
-- Each exercise includes:
-  - Name and description
-  - Target muscle groups (primary + secondary)
-  - Equipment needed (or "none" for bodyweight)
-  - **Open-source real-life media pairs** showing proper form (start + end position)
-  - Common cues/tips
-- Search and filter by muscle group, equipment, type
+### 2. History-Guided Next Focus
+- `/workout` and `/progress` summarize recent logged focuses.
+- The app recommends a next focus by avoiding the most recent sessions and filling gaps in the rotation.
+- Core work rotates emphasis across abs, plank, stability, rotation, and obliques.
 
-### 3. Workout Logging
-- Log each exercise performed during a session
-- Fields per exercise:
-  - **Sets** (number)
-  - **Reps** (number per set)
-  - **Weight** (optional — hidden/disabled for bodyweight and cardio exercises)
-  - **Duration** (optional — for timed exercises like planks, sprints)
-  - **Notes** (optional — form cues, how it felt)
-- Workout types that skip weight field:
-  - Bodyweight exercises (push-ups, pull-ups, dips, etc.)
-  - Sprint/plyometric drills (box jumps, burpees, shuttle runs)
-  - Cardio/conditioning (jump rope, battle ropes duration-based)
-- Quick-log: tap exercise → enter reps → done (weight pre-filled from last session if applicable)
+### 3. Exercise Library
+- Curated exercise database.
+- Categories: chest, back, shoulders, arms, legs, core, cardio, plyometrics.
+- Each exercise includes name, description, target muscle groups, equipment, media, cues, default sets/reps/rest.
+- Search and filter by muscle group, equipment, type.
 
-### 4. Progress Tracking (V1 - Basic)
-- View past workout logs by date
-- See weight/rep progression per exercise over time (simple list view, charts in V2)
-- Weekly summary: total volume, sessions completed vs planned
+### 4. Workout Logging
+- Log each exercise performed during a generated session.
+- Preserves FP-016 completion behavior: partial unsaved data is surfaced instead of silently dropped; Mark Complete remains reliable.
+- Fields per exercise: sets, reps, weight, duration, notes.
+- Bodyweight/cardio/plyo sessions support duration-based logging.
 
-### 5. Exercise Media
-- Every exercise MUST have at least one instructional media pair
-- Use open-source real-life images for start and end positions
-- No user-facing surface should rely on generated SVG exercise diagrams
-- Media should show: starting position, ending position, and enough framing to understand body setup
-- Displayed inline on exercise detail and during workout logging
+### 5. Progress / History
+- View past workout logs by date.
+- See total recent volume and exercises logged.
+- Drill into past sessions and exercise histories.
+- No planned-vs-completed weekly adherence metric; weekly schedule is no longer first-class.
+
+### 6. Exercise Media
+- Every exercise should have at least one instructional media pair or be intentionally unmapped.
+- No user-facing surface should rely on generated SVG exercise diagrams as the primary media source.
 
 ## Data Model
 
+The existing SQLite tables are preserved to avoid data/history churn. `workout_plans` now stores generated single workouts as one-day plans keyed by the workout date; legacy column names such as `week_start_date` remain for compatibility with logs/offline sync.
+
 ### Exercise
 ```
-id, name, description, category, muscleGroups[], equipment, type (strength|bodyweight|cardio|plyo),
-diagramUrls[], cues[], defaultSets, defaultReps, defaultRestSeconds
+id, name, description, category, muscleGroups[], equipment, type, diagrams[], cues[], defaultSets, defaultReps, defaultRestSeconds
 ```
 
-### WorkoutPlan
+### Generated Workout
 ```
-id, weekStartDate, days[{dayOfWeek, type, exercises[{exerciseId, sets, reps, restSeconds}]}]
+id, weekStartDate(date), days[{date, label, workoutType, focus, exercises[{exerciseId, sets, reps, restSeconds}]}]
 ```
 
 ### WorkoutLog
@@ -74,35 +65,18 @@ id, weekStartDate, days[{dayOfWeek, type, exercises[{exerciseId, sets, reps, res
 id, date, planId?, exercises[{exerciseId, sets[{reps, weight?, duration?, notes?}], completed}]
 ```
 
-## UI/UX
-- **Mobile-first** — designed for phone screens (primary use case is at the gym)
-- Bottom nav: Schedule | Log | Exercises | Progress
-- Dark mode default (gym-friendly)
-- Large tap targets for logging (gloves-friendly)
-- Offline support via PWA service worker (cache exercise library + current week's plan)
-- Install prompt on first visit
+## UI/UX Decision
+- Bottom nav: Workout | Log | Exercises | History.
+- Schedule and Log are consolidated around one generated workout: Generate creates the workout; Log captures it; History advises what to do next.
+- This is the simplest coherent flow and avoids resurrecting weekly-plan state.
 
 ## PWA Requirements
-- Service worker for offline caching
-- Web app manifest with icons
-- "Add to Home Screen" support (iOS + Android)
-- Background sync for logs when back online
+- Service worker for offline caching.
+- Web app manifest starts at `/workout`.
+- Background sync for logs when back online.
 
-## Deployment
-- Caddy config: `fitness.kgo.local` → port 3102
-- Accessible via Tailscale for cellular access
-- SQLite DB at `data/fitness.db`
-
-## Out of Scope (V1)
-- AI-powered plan generation (V2 — use LLM to customize based on goals/history)
-- Social features / sharing
-- Video demonstrations (static real-life images only for V1)
-- Nutrition tracking
-- Heart rate / wearable integration
-- Charts/graphs (V2)
-
-## Exercise Media Strategy
-For V1, use a combination of:
-1. **Open-source real-life exercise photography** — source from reusable open-source repositories
-2. **Per-exercise media pairs** — each exercise gets 2 images minimum: start position + end position
-3. **Attribution-aware source mapping** — document source repo and per-exercise mapping in `MEDIA_SOURCING.md` and `lib/exercise-image-map.ts`
+## Out of Scope
+- Weekly schedule generation as primary UX.
+- Social features / sharing.
+- Nutrition tracking.
+- Heart rate / wearable integration.

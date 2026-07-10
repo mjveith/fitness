@@ -3,8 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { findExistingWorkoutLog, saveWorkoutLog } from "@/lib/db";
 import { getWeekStart, formatDate } from "@/lib/date";
-import { getEntriesWithUnsavedData, shouldPersistWorkoutEntry } from "@/lib/workout-completion";
-import { numberOrUndefined, parseExerciseEntries } from "@/lib/log-entry-parse";
+import { getEntriesWithUnsavedData, hasCompletedSetData, shouldPersistWorkoutEntry } from "@/lib/workout-completion";
 import { WorkoutLog } from "@/lib/types";
 
 export type SaveWorkoutLogActionState = {
@@ -13,13 +12,59 @@ export type SaveWorkoutLogActionState = {
   savedAt: number | null;
 };
 
+function numberOrUndefined(value: FormDataEntryValue | null) {
+  if (!value) {
+    return undefined;
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function parseExerciseEntries(params: {
+  exerciseIds: string[];
+  exerciseNames: string[];
+  exerciseTypes: string[];
+  getValue: (key: string) => FormDataEntryValue | null;
+}) {
+  const { exerciseIds, exerciseNames, exerciseTypes, getValue } = params;
+
+  return exerciseIds.map((exerciseId, index) => {
+    const requestedCount = numberOrUndefined(getValue(`${exerciseId}-setCount`)) ?? 0;
+    const setCount = Math.max(0, requestedCount);
+    const sets = Array.from({ length: setCount }, (_, setIndex) => {
+      const prefix = `${exerciseId}-${setIndex}`;
+      return {
+        reps: numberOrUndefined(getValue(`${prefix}-reps`)),
+        weight: numberOrUndefined(getValue(`${prefix}-weight`)),
+        duration: numberOrUndefined(getValue(`${prefix}-duration`)),
+        notes: String(getValue(`${prefix}-notes`) ?? "").trim() || undefined,
+      };
+    }).filter((set) => set.reps || set.weight || set.duration || set.notes);
+
+    const status = String(getValue(`${exerciseId}-status`) ?? "completed") as WorkoutLog["entries"][number]["status"];
+    const completedFromForm = String(getValue(`${exerciseId}-completed`) ?? "false") === "true";
+    const completedFromSetData = setCount > 0 && sets.length === setCount && sets.every(hasCompletedSetData);
+    const completed = completedFromForm || (status === "completed" && completedFromSetData);
+
+    return {
+      exerciseId,
+      name: exerciseNames[index],
+      type: exerciseTypes[index] as WorkoutLog["entries"][number]["type"],
+      completed,
+      status,
+      actualSetCount: setCount,
+      sets,
+    };
+  });
+}
+
 export async function saveWorkoutLogAction(
   _previousState: SaveWorkoutLogActionState,
   formData: FormData,
 ): Promise<SaveWorkoutLogActionState> {
   const actualDate = String(formData.get("actualDate") ?? formData.get("scheduledDate") ?? formatDate(new Date()));
   const dayName = String(formData.get("dayName") ?? "Session");
-  const weekStartDate = String(formData.get("weekStartDate") ?? formatDate(getWeekStart(new Date(`${actualDate}T00:00:00`))));
+  const weekStartDate = String(formData.get("weekStartDate") ?? formatDate(getWeekStart(new Date(actualDate))));
   const planId = String(formData.get("planId") ?? "");
   const exerciseIds = formData.getAll("exerciseId").map(String);
   const exerciseNames = formData.getAll("exerciseName").map(String);
