@@ -4,12 +4,16 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createSingleWorkout } from "@/lib/plans";
 import { formatDate } from "@/lib/date";
+import { singleWorkoutRequestSchema } from "@/lib/validation";
 
 export async function generateWorkoutAction(formData: FormData) {
-  const workoutType = String(formData.get("workoutType") ?? "full-body");
-  const exerciseCount = Number(formData.get("exerciseCount") ?? 5);
+  const parsed = singleWorkoutRequestSchema.safeParse({
+    workoutType: formData.get("workoutType") ?? "full-body",
+    exerciseCount: formData.get("exerciseCount") ?? 5,
+  });
+  const config = parsed.success ? parsed.data : { workoutType: "full-body" as const, exerciseCount: 5 };
   const date = formatDate(new Date());
-  const plan = createSingleWorkout({ workoutType, exerciseCount }, date);
+  const plan = createSingleWorkout(config, date);
 
   revalidatePath("/workout");
   revalidatePath("/log");
