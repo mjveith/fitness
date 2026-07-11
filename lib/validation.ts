@@ -1,4 +1,8 @@
 import { z } from "zod";
+import { maxSetsPerExercise } from "@/lib/log-entry-parse";
+
+const maxExercisesPerLog = 30;
+const maxLogsPerSyncBatch = 50;
 
 const dateStringSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected YYYY-MM-DD");
 const numericValueSchema = z.union([z.number(), z.string().trim().regex(/^-?\d+(?:\.\d+)?$/, "Expected numeric value")]);
@@ -7,11 +11,11 @@ const formScalarSchema = z.union([z.string(), z.number(), z.boolean(), z.null()]
 const formValueSchema = z.union([formScalarSchema, z.array(formScalarSchema)]);
 const stringArrayFromFormValueSchema = z.preprocess(
   (value) => (Array.isArray(value) ? value : value === undefined ? value : [value]),
-  z.array(z.string().trim().min(1)).min(1),
+  z.array(z.string().trim().min(1)).min(1).max(maxExercisesPerLog),
 );
 const exerciseTypeArrayFromFormValueSchema = z.preprocess(
   (value) => (Array.isArray(value) ? value : value === undefined ? value : [value]),
-  z.array(z.enum(["strength", "bodyweight", "cardio", "plyo"])).min(1),
+  z.array(z.enum(["strength", "bodyweight", "cardio", "plyo"])).min(1).max(maxExercisesPerLog),
 );
 
 function getFirstValue(log: Record<string, unknown>, key: string) {
@@ -55,12 +59,12 @@ export const offlineLogSchema = z
 
     for (const exerciseId of log.exerciseId) {
       const setCountValue = getFirstValue(log, `${exerciseId}-setCount`);
-      const setCountResult = z.coerce.number().int().min(0).safeParse(setCountValue);
+      const setCountResult = z.coerce.number().int().min(0).max(maxSetsPerExercise).safeParse(setCountValue);
       if (!setCountResult.success) {
         context.addIssue({
           code: z.ZodIssueCode.custom,
           path: [`${exerciseId}-setCount`],
-          message: "Expected non-negative integer set count",
+          message: `Expected integer set count between 0 and ${maxSetsPerExercise}`,
         });
         continue;
       }
@@ -100,7 +104,7 @@ export const offlineLogSchema = z
   });
 
 export const offlineLogsSyncPayloadSchema = z.object({
-  logs: z.array(offlineLogSchema),
+  logs: z.array(offlineLogSchema).max(maxLogsPerSyncBatch),
 });
 
 export const swapPayloadSchema = z.object({

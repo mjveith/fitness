@@ -46,13 +46,25 @@ function validLog(overrides = {}) {
   };
 }
 
+function makeRequest(payload, { rawText, contentLength } = {}) {
+  const text = rawText ?? JSON.stringify(payload);
+  const headers = new Map();
+  if (contentLength !== undefined) {
+    headers.set('content-length', String(contentLength));
+  }
+  return {
+    headers: { get: (key) => headers.get(key.toLowerCase()) ?? null },
+    text: async () => text
+  };
+}
+
 test.beforeEach(() => {
   savedLogs.length = 0;
   findExistingWorkoutLog = () => null;
 });
 
 test('logs sync route rejects malformed JSON with 400', async () => {
-  const response = await POST({ json: async () => { throw new SyntaxError('bad json'); } });
+  const response = await POST(makeRequest(null, { rawText: '{not json' }));
   const body = await response.json();
 
   assert.equal(response.status, 400);
@@ -60,9 +72,27 @@ test('logs sync route rejects malformed JSON with 400', async () => {
   assert.equal(savedLogs.length, 0);
 });
 
+test('logs sync route rejects oversized bodies with 413', async () => {
+  const declaredTooLarge = await POST(makeRequest({ logs: [] }, { contentLength: 2 * 1024 * 1024 }));
+  assert.equal(declaredTooLarge.status, 413);
+
+  const actuallyTooLarge = await POST(makeRequest(null, { rawText: 'x'.repeat(1024 * 1024 + 1) }));
+  assert.equal(actuallyTooLarge.status, 413);
+  assert.equal(savedLogs.length, 0);
+});
+
+test('logs sync route rejects set counts above the per-exercise cap', async () => {
+  const response = await POST(makeRequest({ logs: [validLog({ 'bench-press-setCount': '1000000' })] }));
+  const body = await response.json();
+
+  assert.equal(response.status, 400);
+  assert.equal(body.error, 'invalid payload');
+  assert.equal(savedLogs.length, 0);
+});
+
 test('logs sync route rejects invalid logs before saving any batch entries', async () => {
   const { date, ...logWithoutDate } = validLog();
-  const response = await POST({ json: async () => ({ logs: [validLog(), logWithoutDate] }) });
+  const response = await POST(makeRequest({ logs: [validLog(), logWithoutDate] }));
   const body = await response.json();
 
   assert.equal(response.status, 400);
@@ -73,7 +103,7 @@ test('logs sync route rejects invalid logs before saving any batch entries', asy
 test('logs sync route reports duplicates in skippedDuplicates instead of synced', async () => {
   findExistingWorkoutLog = () => ({ id: 'existing-log' });
 
-  const response = await POST({ json: async () => ({ logs: [validLog()] }) });
+  const response = await POST(makeRequest({ logs: [validLog()] }));
   const body = await response.json();
 
   assert.equal(response.status, 200);

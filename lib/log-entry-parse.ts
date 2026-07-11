@@ -3,6 +3,11 @@ import { hasCompletedSetData } from "@/lib/workout-completion";
 
 export type LogEntryValue = FormDataEntryValue | string | number | boolean | null | undefined;
 
+// Hard cap on sets per exercise. Requests are untrusted: without this cap a
+// single payload with a huge setCount makes Array.from allocate that many
+// entries server-side (memory-exhaustion DoS).
+export const maxSetsPerExercise = 50;
+
 export type ParseExerciseEntriesParams = {
   exerciseIds: string[];
   exerciseNames: string[];
@@ -28,7 +33,7 @@ export function parseExerciseEntries(params: ParseExerciseEntriesParams): Workou
 
   return exerciseIds.map((exerciseId, index) => {
     const requestedCount = numberOrUndefined(valueAt(getValue(`${exerciseId}-setCount`), 0)) ?? 0;
-    const setCount = Math.max(0, requestedCount);
+    const setCount = Math.min(maxSetsPerExercise, Math.max(0, Math.floor(requestedCount)));
     const sets = Array.from({ length: setCount }, (_, setIndex) => {
       const prefix = `${exerciseId}-${setIndex}`;
       return {
