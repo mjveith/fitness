@@ -5,10 +5,21 @@ import { numberOrUndefined, parseExerciseEntries } from "@/lib/log-entry-parse";
 import { offlineLogsSyncPayloadSchema } from "@/lib/validation";
 import { WorkoutLog } from "@/lib/types";
 
+const maxBodyBytes = 1024 * 1024;
+
 export async function POST(request: NextRequest) {
+  const contentLength = Number(request.headers.get("content-length"));
+  if (Number.isFinite(contentLength) && contentLength > maxBodyBytes) {
+    return NextResponse.json({ error: "request body too large" }, { status: 413 });
+  }
+
   let json: unknown;
   try {
-    json = await request.json();
+    const rawBody = await request.text();
+    if (Buffer.byteLength(rawBody, "utf8") > maxBodyBytes) {
+      return NextResponse.json({ error: "request body too large" }, { status: 413 });
+    }
+    json = JSON.parse(rawBody);
   } catch {
     return NextResponse.json({ error: "invalid JSON" }, { status: 400 });
   }
